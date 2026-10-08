@@ -30,19 +30,19 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
-        android:name=".GpsMirageApp"
+        android:name="com.dhikadityre.gpsmirage.GpsMirageApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GPSMirage"
         tools:targetApi="31">
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.dhikadityre.gpsmirage.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.GPSMirage.Splash">
             <intent-filter>
@@ -53,7 +53,7 @@
 
         <!-- Mock Location Foreground Service -->
         <service
-            android:name=".service.MockLocationService"
+            android:name="com.dhikadityre.gpsmirage.service.MockLocationService"
             android:exported="false"
             android:foregroundServiceType="location" />
 
