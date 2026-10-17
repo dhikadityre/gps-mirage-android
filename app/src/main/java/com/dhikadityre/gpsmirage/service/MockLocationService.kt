@@ -32,6 +32,10 @@ class MockLocationService : Service() {
         const val CHANNEL_ID = "gps_mirage_mock_location"
         const val NOTIFICATION_ID = 1001
         const val PROVIDER_NAME = LocationManager.GPS_PROVIDER
+        val DUAL_PROVIDERS = listOf(
+            LocationManager.GPS_PROVIDER,
+            LocationManager.NETWORK_PROVIDER
+        )
 
         const val ACTION_START = "com.dhikadityre.dev.tools.ACTION_START"
         const val ACTION_STOP = "com.dhikadityre.dev.tools.ACTION_STOP"
@@ -130,45 +134,86 @@ class MockLocationService : Service() {
     }
 
     private fun setupMockProvider() {
+        val lm = locationManager ?: return
         try {
-            val lm = locationManager ?: return
-            try {
-                lm.removeTestProvider(PROVIDER_NAME)
-            } catch (_: Exception) {}
+            // Clean up any stale providers
+            DUAL_PROVIDERS.forEach { provider ->
+                try {
+                    lm.removeTestProvider(provider)
+                } catch (_: Exception) {}
+            }
 
+            // Setup GPS provider (fine location, satellite, altitude, speed, bearing)
             lm.addTestProvider(
-                PROVIDER_NAME,
-                false, false, false, false, true, true, true,
-                Criteria.POWER_LOW, Criteria.ACCURACY_FINE
+                LocationManager.GPS_PROVIDER,
+                false, // requiresNetwork
+                true,  // requiresSatellite
+                false, // requiresCell
+                false, // hasMonetaryCost
+                true,  // supportsAltitude
+                true,  // supportsSpeed
+                true,  // supportsBearing
+                Criteria.POWER_LOW,
+                Criteria.ACCURACY_FINE
             )
-            lm.setTestProviderEnabled(PROVIDER_NAME, true)
+            lm.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
+
+            // Setup Network provider (coarse location, network/cell)
+            lm.addTestProvider(
+                LocationManager.NETWORK_PROVIDER,
+                true,  // requiresNetwork
+                false, // requiresSatellite
+                true,  // requiresCell
+                false, // hasMonetaryCost
+                false, // supportsAltitude
+                false, // supportsSpeed
+                false, // supportsBearing
+                Criteria.POWER_LOW,
+                Criteria.ACCURACY_COARSE
+            )
+            lm.setTestProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
         } catch (e: SecurityException) {
             // App not set as mock location app in developer options
-        }
+        } catch (_: Exception) {}
     }
 
     private fun pushMockLocation() {
         val lm = locationManager ?: return
-        val mockLocation = Location(PROVIDER_NAME).apply {
-            latitude = currentLat
-            longitude = currentLng
-            accuracy = currentAccuracy
-            altitude = currentAltitude
-            speed = currentSpeed
-            bearing = currentBearing
-            time = System.currentTimeMillis()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
-            }
+        val now = System.currentTimeMillis()
+        val elapsedNanos = SystemClock.elapsedRealtimeNanos()
+
+        DUAL_PROVIDERS.forEach { provider ->
+            try {
+                val mockLocation = Location(provider).apply {
+                    latitude = currentLat
+                    longitude = currentLng
+                    time = now
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                        elapsedRealtimeNanos = elapsedNanos
+                    }
+                    if (provider == LocationManager.GPS_PROVIDER) {
+                        accuracy = currentAccuracy
+                        altitude = currentAltitude
+                        speed = currentSpeed
+                        bearing = currentBearing
+                    } else {
+                        // Network provider typical accuracy ~15m
+                        accuracy = (currentAccuracy * 2).coerceAtLeast(15f)
+                    }
+                }
+                lm.setTestProviderLocation(provider, mockLocation)
+            } catch (_: Exception) {}
         }
-        lm.setTestProviderLocation(PROVIDER_NAME, mockLocation)
     }
 
     private fun stopMocking() {
         mockJob?.cancel()
-        try {
-            locationManager?.removeTestProvider(PROVIDER_NAME)
-        } catch (_: Exception) {}
+        val lm = locationManager ?: return
+        DUAL_PROVIDERS.forEach { provider ->
+            try {
+                lm.removeTestProvider(provider)
+            } catch (_: Exception) {}
+        }
     }
 
     private fun createNotificationChannel() {
