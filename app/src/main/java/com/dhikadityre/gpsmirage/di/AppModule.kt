@@ -8,6 +8,8 @@ import com.dhikadityre.gpsmirage.core.parser.LocationParser
 import com.dhikadityre.gpsmirage.core.parser.LocationParserImpl
 import com.dhikadityre.gpsmirage.core.location.DeviceLocationProvider
 import com.dhikadityre.gpsmirage.core.location.DeviceLocationProviderImpl
+import com.dhikadityre.gpsmirage.core.geo.ReverseGeocoder
+import com.dhikadityre.gpsmirage.core.geo.AndroidReverseGeocoderImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -41,4 +43,10 @@ abstract class AppModule {
     abstract fun bindDeviceLocationProvider(
         impl: DeviceLocationProviderImpl
     ): DeviceLocationProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindReverseGeocoder(
+        impl: AndroidReverseGeocoderImpl
+    ): ReverseGeocoder
 }
