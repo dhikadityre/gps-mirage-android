@@ -92,6 +92,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
+import org.osmdroid.views.overlay.infowindow.InfoWindow
 
 @Composable
 fun MapScreen(
@@ -181,6 +182,8 @@ fun MapScreen(
                 modifier = Modifier.fillMaxSize(),
                 selectedCoordinate = uiState.selectedCoordinate,
                 radiusConfig = uiState.radiusConfig,
+                isResolvingAddress = uiState.isResolvingAddress,
+                resolvedShortAddress = uiState.resolvedShortAddress,
                 onMapTap = { lat, lng -> viewModel.onMapTap(lat, lng) },
                 onMapViewReady = { mapViewRef = it }
             )
@@ -264,6 +267,8 @@ private fun OsmMapView(
     modifier: Modifier = Modifier,
     selectedCoordinate: Coordinate?,
     radiusConfig: RadiusConfig,
+    isResolvingAddress: Boolean,
+    resolvedShortAddress: String?,
     onMapTap: (Double, Double) -> Unit,
     onMapViewReady: (MapView) -> Unit
 ) {
@@ -294,6 +299,7 @@ private fun OsmMapView(
             }
         },
         update = { mapView ->
+            InfoWindow.closeAllInfoWindowsOn(mapView)
             mapView.overlays.removeAll { it is Marker || it is Polygon }
 
             // Render Geofence Circle Overlay & Anchor Marker if radius constraint is enabled with anchor
@@ -325,14 +331,26 @@ private fun OsmMapView(
                 }
             }
 
-            // Render Selected Coordinate Marker
+            // Render Selected Coordinate Marker with InfoWindow Preview Callout
             if (selectedCoordinate != null) {
+                val titleText = when {
+                    isResolvingAddress -> "Mendeteksi nama jalan..."
+                    !resolvedShortAddress.isNullOrBlank() -> resolvedShortAddress
+                    else -> "Lokasi Terpilih"
+                }
+                val snippetText = "%.5f, %.5f".format(
+                    selectedCoordinate.latitude,
+                    selectedCoordinate.longitude
+                )
+
                 val marker = Marker(mapView).apply {
                     position = GeoPoint(selectedCoordinate.latitude, selectedCoordinate.longitude)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    title = "Selected Location"
+                    title = titleText
+                    snippet = snippetText
                 }
                 mapView.overlays.add(marker)
+                marker.showInfoWindow()
 
                 if (selectedCoordinate != lastAnimatedCoord) {
                     mapView.controller.animateTo(
