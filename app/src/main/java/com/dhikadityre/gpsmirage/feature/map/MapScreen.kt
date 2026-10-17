@@ -18,19 +18,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
@@ -44,6 +51,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -89,6 +97,9 @@ import com.dhikadityre.gpsmirage.core.model.Location
 import com.dhikadityre.gpsmirage.core.model.RadiusConfig
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -186,8 +197,40 @@ fun MapScreen(
                 radiusConfig = uiState.radiusConfig,
                 isResolvingAddress = uiState.isResolvingAddress,
                 resolvedShortAddress = uiState.resolvedShortAddress,
+                selectionMode = uiState.selectionMode,
+                isPositionLocked = uiState.isPositionLocked,
                 onMapTap = { lat, lng -> viewModel.onMapTap(lat, lng) },
+                onMapCenterMoved = { lat, lng -> viewModel.onMapCenterMoved(lat, lng) },
                 onMapViewReady = { mapViewRef = it }
+            )
+
+            if (uiState.selectionMode == MapSelectionMode.CENTER_PIN && !uiState.isPositionLocked) {
+                CenterPinOverlay(
+                    isResolvingAddress = uiState.isResolvingAddress,
+                    resolvedShortAddress = uiState.resolvedShortAddress
+                )
+            }
+
+            MapFloatingControls(
+                selectionMode = uiState.selectionMode,
+                isPositionLocked = uiState.isPositionLocked,
+                onToggleSelectionMode = {
+                    val nextMode = if (uiState.selectionMode == MapSelectionMode.CENTER_PIN) {
+                        MapSelectionMode.TAP_TO_SELECT
+                    } else {
+                        MapSelectionMode.CENTER_PIN
+                    }
+                    viewModel.setSelectionMode(nextMode)
+                },
+                onTogglePositionLock = {
+                    viewModel.togglePositionLock()
+                },
+                onZoomIn = { mapViewRef?.controller?.zoomIn() },
+                onZoomOut = { mapViewRef?.controller?.zoomOut() },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(y = (-80).dp)
+                    .padding(end = 16.dp)
             )
 
             if (uiState.isMockActive) {
@@ -212,6 +255,7 @@ fun MapScreen(
                     radiusConfig = uiState.radiusConfig,
                     distanceToAnchorMeters = uiState.distanceToAnchorMeters,
                     isWithinRadius = uiState.isWithinRadius,
+                    isPositionLocked = uiState.isPositionLocked,
                     onSave = { name ->
                         viewModel.onSaveLocation(name)
                         onSaveLocation(
@@ -273,7 +317,10 @@ private fun OsmMapView(
     radiusConfig: RadiusConfig,
     isResolvingAddress: Boolean,
     resolvedShortAddress: String?,
+    selectionMode: MapSelectionMode,
+    isPositionLocked: Boolean,
     onMapTap: (Double, Double) -> Unit,
+    onMapCenterMoved: (Double, Double) -> Unit,
     onMapViewReady: (MapView) -> Unit
 ) {
     var lastAnimatedCoord by remember { mutableStateOf<Coordinate?>(null) }
@@ -284,9 +331,24 @@ private fun OsmMapView(
             Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
             MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
-                setBuiltInZoomControls(true)
+                setBuiltInZoomControls(false)
                 setMultiTouchControls(true)
                 controller.setZoom(15.0)
+
+                addMapListener(object : MapListener {
+                    override fun onScroll(event: ScrollEvent?): Boolean {
+                        val center = mapCenter
+                        onMapCenterMoved(center.latitude, center.longitude)
+                        return true
+                    }
+
+                    override fun onZoom(event: ZoomEvent?): Boolean {
+                        val center = mapCenter
+                        onMapCenterMoved(center.latitude, center.longitude)
+                        return true
+                    }
+                })
+
                 overlays.add(object : org.osmdroid.views.overlay.Overlay() {
                     override fun onSingleTapConfirmed(
                         e: android.view.MotionEvent?,
@@ -299,6 +361,10 @@ private fun OsmMapView(
                         return true
                     }
                 })
+                post {
+                    val center = mapCenter
+                    onMapCenterMoved(center.latitude, center.longitude)
+                }
                 onMapViewReady(this)
             }
         },
@@ -336,7 +402,8 @@ private fun OsmMapView(
             }
 
             // Render Selected Coordinate Marker with InfoWindow Preview Callout
-            if (selectedCoordinate != null) {
+            // In CENTER_PIN mode when not locked, the pin is rendered via Compose CenterPinOverlay
+            if (selectedCoordinate != null && (selectionMode == MapSelectionMode.TAP_TO_SELECT || isPositionLocked)) {
                 val titleText = when {
                     isResolvingAddress -> "Mendeteksi nama jalan..."
                     !resolvedShortAddress.isNullOrBlank() -> resolvedShortAddress
@@ -356,7 +423,7 @@ private fun OsmMapView(
                 mapView.overlays.add(marker)
                 marker.showInfoWindow()
 
-                if (selectedCoordinate != lastAnimatedCoord) {
+                if (selectedCoordinate != lastAnimatedCoord && selectionMode == MapSelectionMode.TAP_TO_SELECT) {
                     mapView.controller.animateTo(
                         GeoPoint(selectedCoordinate.latitude, selectedCoordinate.longitude)
                     )
@@ -457,6 +524,7 @@ private fun SelectedCoordinateCard(
     radiusConfig: RadiusConfig,
     distanceToAnchorMeters: Double?,
     isWithinRadius: Boolean,
+    isPositionLocked: Boolean = false,
     onSave: (String) -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier
@@ -543,6 +611,39 @@ private fun SelectedCoordinateCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                         modifier = Modifier.padding(start = 26.dp)
                     )
+                }
+            }
+
+            if (isPositionLocked) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Posisi Terkunci",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "Peta bebas digeser",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
                 }
             }
 
@@ -885,3 +986,162 @@ private fun MockNotConfiguredDialog(
         }
     )
 }
+
+@Composable
+private fun MapFloatingControls(
+    selectionMode: MapSelectionMode,
+    isPositionLocked: Boolean,
+    onToggleSelectionMode: () -> Unit,
+    onTogglePositionLock: () -> Unit,
+    onZoomIn: () -> Unit,
+    onZoomOut: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
+            // Mode Switcher Button (Center Pin vs Tap)
+            IconButton(
+                onClick = onToggleSelectionMode,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = if (selectionMode == MapSelectionMode.CENTER_PIN) {
+                        Icons.Default.CenterFocusStrong
+                    } else {
+                        Icons.Default.TouchApp
+                    },
+                    contentDescription = if (selectionMode == MapSelectionMode.CENTER_PIN) {
+                        "Mode Bidik Tengah (Aktif)"
+                    } else {
+                        "Mode Ketuk Bebas (Aktif)"
+                    },
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Position Lock Toggle Button
+            IconButton(
+                onClick = onTogglePositionLock,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = if (isPositionLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    contentDescription = if (isPositionLocked) "Buka Kunci Posisi" else "Kunci Posisi",
+                    tint = if (isPositionLocked) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+
+            HorizontalDivider(
+                modifier = Modifier
+                    .width(28.dp)
+                    .padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            )
+
+            // Zoom In
+            IconButton(
+                onClick = onZoomIn,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Zoom In",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // Zoom Out
+            IconButton(
+                onClick = onZoomOut,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Remove,
+                    contentDescription = "Zoom Out",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CenterPinOverlay(
+    isResolvingAddress: Boolean,
+    resolvedShortAddress: String?,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.offset(y = (-20).dp)
+        ) {
+            // Floating micro-pill preview with street name / resolving indicator above the pin
+            if (isResolvingAddress || !resolvedShortAddress.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    shadowElevation = 6.dp,
+                    tonalElevation = 6.dp,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        if (isResolvingAddress) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(10.dp),
+                                strokeWidth = 1.5.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Mencari jalan...",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else if (!resolvedShortAddress.isNullOrBlank()) {
+                            Text(
+                                text = resolvedShortAddress,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = "Target Location",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            )
+            Box(
+                modifier = Modifier
+                    .size(4.dp)
+                    .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
+            )
+        }
+    }
+}
+

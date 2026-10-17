@@ -13,6 +13,7 @@ import com.dhikadityre.gpsmirage.domain.location.MockLocationManager
 import com.dhikadityre.gpsmirage.domain.location.MockStartResult
 import com.dhikadityre.gpsmirage.domain.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -109,9 +110,61 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun onMapTap(lat: Double, lng: Double) {
+    fun setSelectionMode(mode: MapSelectionMode) {
+        _uiState.update { it.copy(selectionMode = mode) }
+    }
+
+    fun togglePositionLock() {
+        _uiState.update { it.copy(isPositionLocked = !it.isPositionLocked) }
+    }
+
+    fun onMapCenterMoved(lat: Double, lng: Double) {
+        val currentState = _uiState.value
+        if (currentState.isPositionLocked || currentState.selectionMode != MapSelectionMode.CENTER_PIN) {
+            return
+        }
+
         val selected = Coordinate(latitude = lat, longitude = lng)
-        val (dist, isWithin) = calculateRadiusValidation(selected, _uiState.value.radiusConfig)
+        val (dist, isWithin) = calculateRadiusValidation(selected, currentState.radiusConfig)
+
+        addressResolutionJob?.cancel()
+
+        _uiState.update { ui ->
+            ui.copy(
+                selectedCoordinate = selected,
+                selectedLocationName = "",
+                resolvedShortAddress = null,
+                isResolvingAddress = true,
+                distanceToAnchorMeters = dist,
+                isWithinRadius = isWithin
+            )
+        }
+
+        addressResolutionJob = viewModelScope.launch {
+            delay(400L)
+            val result = reverseGeocoder.getShortAddress(selected)
+            _uiState.update { ui ->
+                if (ui.selectedCoordinate == selected) {
+                    ui.copy(
+                        isResolvingAddress = false,
+                        resolvedShortAddress = result?.shortAddress,
+                        selectedLocationName = result?.shortAddress ?: ""
+                    )
+                } else {
+                    ui
+                }
+            }
+        }
+    }
+
+    fun onMapTap(lat: Double, lng: Double) {
+        val currentState = _uiState.value
+        if (currentState.isPositionLocked || currentState.selectionMode != MapSelectionMode.TAP_TO_SELECT) {
+            return
+        }
+
+        val selected = Coordinate(latitude = lat, longitude = lng)
+        val (dist, isWithin) = calculateRadiusValidation(selected, currentState.radiusConfig)
 
         addressResolutionJob?.cancel()
 

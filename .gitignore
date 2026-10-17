@@ -13,3 +13,7 @@ app/build/
 *.aab
 
 .kotlin/
+
+*.log
+run_emulator.bat
+preview_*.png

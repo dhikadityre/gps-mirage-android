@@ -168,6 +168,7 @@ class MapViewModelTest {
     @Test
     fun `when radius is disabled, selection anywhere is valid and within radius`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         advanceUntilIdle()
 
         // Radius disabled by default
@@ -185,6 +186,7 @@ class MapViewModelTest {
     @Test
     fun `when radius is enabled, tap inside radius marks isWithinRadius true and computes distance`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         val anchor = Coordinate(latitude = -6.2088, longitude = 106.8456)
         fakeSettingsRepository.updateRadiusConfig(
             RadiusConfig(
@@ -209,6 +211,7 @@ class MapViewModelTest {
     @Test
     fun `when radius is enabled, tap outside radius marks isWithinRadius false and computes distance`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         val anchor = Coordinate(latitude = -6.2088, longitude = 106.8456)
         fakeSettingsRepository.updateRadiusConfig(
             RadiusConfig(
@@ -233,6 +236,7 @@ class MapViewModelTest {
     @Test
     fun `when outside radius, onStartMock is rejected and emits warning event`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         val anchor = Coordinate(latitude = -6.2088, longitude = 106.8456)
         fakeSettingsRepository.updateRadiusConfig(
             RadiusConfig(
@@ -261,6 +265,7 @@ class MapViewModelTest {
     @Test
     fun `when radiusConfig updates dynamically, existing selected coordinate re-evaluates boundary`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         val anchor = Coordinate(latitude = -6.2088, longitude = 106.8456)
         advanceUntilIdle()
 
@@ -301,6 +306,7 @@ class MapViewModelTest {
         fakeReverseGeocoder.resultToReturn = GeocodeResult(shortAddress = "Jl. Jenderal Sudirman No. 10")
         fakeReverseGeocoder.delayMs = 100L
         val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
 
         viewModel.onMapTap(-6.2088, 106.8456)
 
@@ -319,6 +325,7 @@ class MapViewModelTest {
     fun `onMapTap handles geocoder null result safely`() = runTest(testDispatcher) {
         fakeReverseGeocoder.resultToReturn = null
         val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
 
         viewModel.onMapTap(-6.2088, 106.8456)
         advanceUntilIdle()
@@ -342,6 +349,7 @@ class MapViewModelTest {
             }
         }
         val viewModel = createViewModel(reverseGeocoder = customGeocoder)
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
 
         viewModel.onMapTap(-6.1, 106.1)
         viewModel.onMapTap(-6.2, 106.2)
@@ -352,6 +360,152 @@ class MapViewModelTest {
         assertEquals("Latest Street", viewModel.uiState.value.resolvedShortAddress)
         assertEquals("Latest Street", viewModel.uiState.value.selectedLocationName)
         assertEquals(false, viewModel.uiState.value.isResolvingAddress)
+    }
+
+    @Test
+    fun `initial state defaults to CENTER_PIN selectionMode and unlocked position`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(MapSelectionMode.CENTER_PIN, viewModel.uiState.value.selectionMode)
+        assertFalse(viewModel.uiState.value.isPositionLocked)
+    }
+
+    @Test
+    fun `togglePositionLock flips isPositionLocked state`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isPositionLocked)
+        viewModel.togglePositionLock()
+        assertTrue(viewModel.uiState.value.isPositionLocked)
+        viewModel.togglePositionLock()
+        assertFalse(viewModel.uiState.value.isPositionLocked)
+    }
+
+    @Test
+    fun `setSelectionMode switches selectionMode state`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(MapSelectionMode.CENTER_PIN, viewModel.uiState.value.selectionMode)
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
+        assertEquals(MapSelectionMode.TAP_TO_SELECT, viewModel.uiState.value.selectionMode)
+        viewModel.setSelectionMode(MapSelectionMode.CENTER_PIN)
+        assertEquals(MapSelectionMode.CENTER_PIN, viewModel.uiState.value.selectionMode)
+    }
+
+    @Test
+    fun `in CENTER_PIN mode, onMapCenterMoved updates selectedCoordinate and calculates radius`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        val anchor = Coordinate(latitude = -6.2088, longitude = 106.8456)
+        fakeSettingsRepository.updateRadiusConfig(
+            RadiusConfig(isEnabled = true, anchor = anchor, radiusMeters = 500.0)
+        )
+        advanceUntilIdle()
+
+        val pointInside = Coordinate(latitude = -6.2078, longitude = 106.8456)
+        viewModel.onMapCenterMoved(pointInside.latitude, pointInside.longitude)
+
+        // Coordinates and radius are updated immediately
+        assertEquals(pointInside, viewModel.uiState.value.selectedCoordinate)
+        assertTrue(viewModel.uiState.value.isWithinRadius)
+        assertTrue(viewModel.uiState.value.isResolvingAddress)
+
+        // Address resolution completes after debounce + geocoding
+        advanceUntilIdle()
+        assertEquals(false, viewModel.uiState.value.isResolvingAddress)
+        assertEquals("Jl. Sudirman No. 10", viewModel.uiState.value.resolvedShortAddress)
+    }
+
+    @Test
+    fun `in CENTER_PIN mode, rapid onMapCenterMoved debounces reverse geocoder lookup`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onMapCenterMoved(-6.1001, 106.8001)
+        viewModel.onMapCenterMoved(-6.1002, 106.8002)
+        viewModel.onMapCenterMoved(-6.1003, 106.8003)
+
+        // Before debounce timer expires, geocoder callsCount should be 0
+        assertEquals(0, fakeReverseGeocoder.callsCount)
+
+        advanceUntilIdle()
+
+        // After settling, only 1 geocoder call should have been made for the final coordinate
+        assertEquals(1, fakeReverseGeocoder.callsCount)
+        assertEquals(Coordinate(-6.1003, 106.8003), fakeReverseGeocoder.lastCoordinate)
+        assertEquals(Coordinate(-6.1003, 106.8003), viewModel.uiState.value.selectedCoordinate)
+    }
+
+    @Test
+    fun `when position is locked, onMapCenterMoved is ignored`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val initialCoord = Coordinate(-6.2088, 106.8456)
+        viewModel.onMapCenterMoved(initialCoord.latitude, initialCoord.longitude)
+        advanceUntilIdle()
+        assertEquals(initialCoord, viewModel.uiState.value.selectedCoordinate)
+
+        viewModel.togglePositionLock()
+        assertTrue(viewModel.uiState.value.isPositionLocked)
+
+        // Attempt to move center while locked
+        viewModel.onMapCenterMoved(-6.3000, 106.9000)
+        advanceUntilIdle()
+
+        // Coordinate must remain initialCoord
+        assertEquals(initialCoord, viewModel.uiState.value.selectedCoordinate)
+    }
+
+    @Test
+    fun `when in TAP_TO_SELECT mode, onMapCenterMoved is ignored and onMapTap updates coordinate`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
+        advanceUntilIdle()
+
+        // onMapCenterMoved should be ignored
+        viewModel.onMapCenterMoved(-6.1111, 106.1111)
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.selectedCoordinate)
+
+        // onMapTap should work
+        val tapCoord = Coordinate(-6.2222, 106.2222)
+        viewModel.onMapTap(tapCoord.latitude, tapCoord.longitude)
+        advanceUntilIdle()
+        assertEquals(tapCoord, viewModel.uiState.value.selectedCoordinate)
+    }
+
+    @Test
+    fun `when in CENTER_PIN mode, onMapTap is ignored`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        assertEquals(MapSelectionMode.CENTER_PIN, viewModel.uiState.value.selectionMode)
+
+        viewModel.onMapTap(-6.5555, 106.5555)
+        advanceUntilIdle()
+
+        // Coordinate must remain null because taps are ignored in CENTER_PIN mode
+        assertNull(viewModel.uiState.value.selectedCoordinate)
+    }
+
+    @Test
+    fun `when position is locked in TAP_TO_SELECT mode, onMapTap is ignored`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
+        val initialCoord = Coordinate(-6.2088, 106.8456)
+        viewModel.onMapTap(initialCoord.latitude, initialCoord.longitude)
+        advanceUntilIdle()
+        assertEquals(initialCoord, viewModel.uiState.value.selectedCoordinate)
+
+        viewModel.togglePositionLock()
+        assertTrue(viewModel.uiState.value.isPositionLocked)
+
+        viewModel.onMapTap(-6.9999, 106.9999)
+        advanceUntilIdle()
+
+        assertEquals(initialCoord, viewModel.uiState.value.selectedCoordinate)
     }
 }
 

@@ -4,6 +4,11 @@ import com.dhikadityre.gpsmirage.core.model.Coordinate
 import com.dhikadityre.gpsmirage.core.model.Location
 import com.dhikadityre.gpsmirage.core.model.RadiusConfig
 
+enum class MapSelectionMode {
+    CENTER_PIN,
+    TAP_TO_SELECT
+}
+
 data class MapUiState(
     val selectedCoordinate: Coordinate? = null,
     val selectedLocationName: String = "",
@@ -18,6 +23,8 @@ data class MapUiState(
     val radiusConfig: RadiusConfig = RadiusConfig(),
     val distanceToAnchorMeters: Double? = null,
     val isWithinRadius: Boolean = true,
+    val selectionMode: MapSelectionMode = MapSelectionMode.CENTER_PIN,
+    val isPositionLocked: Boolean = false,
     val error: String? = null,
     val event: MapEvent? = null
 )
