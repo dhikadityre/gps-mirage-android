@@ -51,6 +51,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -70,6 +71,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -204,6 +206,8 @@ fun MapScreen(
                 SelectedCoordinateCard(
                     coordinate = uiState.selectedCoordinate!!,
                     locationName = uiState.selectedLocationName,
+                    isResolvingAddress = uiState.isResolvingAddress,
+                    resolvedShortAddress = uiState.resolvedShortAddress,
                     isLoading = uiState.isLoading,
                     radiusConfig = uiState.radiusConfig,
                     distanceToAnchorMeters = uiState.distanceToAnchorMeters,
@@ -447,6 +451,8 @@ private fun MockActiveBanner(
 private fun SelectedCoordinateCard(
     coordinate: Coordinate,
     locationName: String,
+    isResolvingAddress: Boolean,
+    resolvedShortAddress: String?,
     isLoading: Boolean,
     radiusConfig: RadiusConfig,
     distanceToAnchorMeters: Double?,
@@ -455,7 +461,13 @@ private fun SelectedCoordinateCard(
     onStart: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var nameInput by remember(coordinate) { mutableStateOf(locationName.ifBlank { "Unnamed Location" }) }
+    var nameInput by remember(coordinate) { mutableStateOf(locationName) }
+
+    LaunchedEffect(resolvedShortAddress) {
+        if (!resolvedShortAddress.isNullOrBlank() && (nameInput.isBlank() || nameInput == "Unnamed Location")) {
+            nameInput = resolvedShortAddress
+        }
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -468,21 +480,79 @@ private fun SelectedCoordinateCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Location Preview Card (Street Name & Lat/Lng)
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        if (isResolvingAddress) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(12.dp),
+                                    strokeWidth = 1.5.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Mendeteksi nama jalan...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else if (!resolvedShortAddress.isNullOrBlank()) {
+                            Text(
+                                text = resolvedShortAddress,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        } else {
+                            Text(
+                                text = "Nama jalan tidak terdeteksi",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "%.6f,  %.6f".format(coordinate.latitude, coordinate.longitude),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        modifier = Modifier.padding(start = 26.dp)
+                    )
+                }
+            }
+
             OutlinedTextField(
                 value = nameInput,
                 onValueChange = { nameInput = it },
                 label = { Text("Location name") },
+                placeholder = { Text("Nama lokasi") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
-            )
-
-            Text(
-                text = "%.6f,  %.6f".format(coordinate.latitude, coordinate.longitude),
-                fontFamily = FontFamily.Monospace,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
             )
 
             // Geofence Radius Info & Warning Badge
@@ -553,7 +623,7 @@ private fun SelectedCoordinateCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ElevatedButton(
-                    onClick = { onSave(nameInput) },
+                    onClick = { onSave(nameInput.ifBlank { "Unnamed Location" }) },
                     enabled = !isLoading,
                     modifier = Modifier.weight(1f)
                 ) {
