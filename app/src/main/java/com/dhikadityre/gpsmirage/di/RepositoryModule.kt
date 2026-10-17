@@ -6,6 +6,8 @@ import com.dhikadityre.gpsmirage.data.repository.LocationRepositoryImpl
 import com.dhikadityre.gpsmirage.domain.folder.FolderRepository
 import com.dhikadityre.gpsmirage.domain.history.HistoryRepository
 import com.dhikadityre.gpsmirage.domain.location.LocationRepository
+import com.dhikadityre.gpsmirage.data.repository.SettingsRepositoryImpl
+import com.dhikadityre.gpsmirage.domain.settings.SettingsRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -33,4 +35,10 @@ abstract class RepositoryModule {
     abstract fun bindHistoryRepository(
         impl: HistoryRepositoryImpl
     ): HistoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSettingsRepository(
+        impl: SettingsRepositoryImpl
+    ): SettingsRepository
 }
