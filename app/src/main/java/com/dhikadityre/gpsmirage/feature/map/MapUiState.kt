@@ -2,6 +2,7 @@ package com.dhikadityre.gpsmirage.feature.map
 
 import com.dhikadityre.gpsmirage.core.model.Coordinate
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.RadiusConfig
 
 data class MapUiState(
     val selectedCoordinate: Coordinate? = null,
@@ -12,6 +13,7 @@ data class MapUiState(
     val recentLocations: List<Location> = emptyList(),
     val favoriteLocations: List<Location> = emptyList(),
     val isQuickLocationsVisible: Boolean = false,
+    val radiusConfig: RadiusConfig = RadiusConfig(),
     val error: String? = null,
     val event: MapEvent? = null
 )

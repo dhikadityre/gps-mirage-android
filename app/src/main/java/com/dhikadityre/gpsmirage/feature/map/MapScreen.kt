@@ -73,14 +73,23 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
+import androidx.core.content.ContextCompat
+import com.dhikadityre.dev.tools.R
 import com.dhikadityre.gpsmirage.core.model.Coordinate
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.RadiusConfig
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 
 @Composable
 fun MapScreen(
@@ -169,6 +178,7 @@ fun MapScreen(
             OsmMapView(
                 modifier = Modifier.fillMaxSize(),
                 selectedCoordinate = uiState.selectedCoordinate,
+                radiusConfig = uiState.radiusConfig,
                 onMapTap = { lat, lng -> viewModel.onMapTap(lat, lng) },
                 onMapViewReady = { mapViewRef = it }
             )
@@ -248,9 +258,12 @@ fun MapScreen(
 private fun OsmMapView(
     modifier: Modifier = Modifier,
     selectedCoordinate: Coordinate?,
+    radiusConfig: RadiusConfig,
     onMapTap: (Double, Double) -> Unit,
     onMapViewReady: (MapView) -> Unit
 ) {
+    var lastAnimatedCoord by remember { mutableStateOf<Coordinate?>(null) }
+
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
@@ -276,7 +289,33 @@ private fun OsmMapView(
             }
         },
         update = { mapView ->
-            mapView.overlays.removeAll { it is Marker }
+            mapView.overlays.removeAll { it is Marker || it is Polygon }
+
+            // Render Geofence Circle Overlay & Anchor Marker if radius constraint is enabled with anchor
+            if (radiusConfig.isEnabled && radiusConfig.anchor != null) {
+                val anchorGeoPoint = GeoPoint(radiusConfig.anchor.latitude, radiusConfig.anchor.longitude)
+
+                val circlePolygon = Polygon(mapView).apply {
+                    points = Polygon.pointsAsCircle(anchorGeoPoint, radiusConfig.radiusMeters)
+                    fillPaint.color = android.graphics.Color.argb(45, 33, 150, 243) // Semi-transparent blue
+                    outlinePaint.color = android.graphics.Color.argb(220, 25, 118, 210) // Solid blue border
+                    outlinePaint.strokeWidth = 3f * mapView.context.resources.displayMetrics.density
+                    title = "Geofence Radius (${radiusConfig.radiusMeters.toInt()}m)"
+                    setOnClickListener { _, _, _ -> false }
+                }
+                mapView.overlays.add(circlePolygon)
+
+                val anchorMarker = Marker(mapView).apply {
+                    position = anchorGeoPoint
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    icon = getAnchorMarkerDrawable(mapView.context)
+                    title = "Anchor Point (Titik Acuan)"
+                    snippet = "Radius: ${radiusConfig.radiusMeters.toInt()}m"
+                }
+                mapView.overlays.add(anchorMarker)
+            }
+
+            // Render Selected Coordinate Marker
             if (selectedCoordinate != null) {
                 val marker = Marker(mapView).apply {
                     position = GeoPoint(selectedCoordinate.latitude, selectedCoordinate.longitude)
@@ -284,17 +323,33 @@ private fun OsmMapView(
                     title = "Selected Location"
                 }
                 mapView.overlays.add(marker)
-                mapView.controller.animateTo(
-                    GeoPoint(selectedCoordinate.latitude, selectedCoordinate.longitude)
-                )
-                mapView.invalidate()
+
+                if (selectedCoordinate != lastAnimatedCoord) {
+                    mapView.controller.animateTo(
+                        GeoPoint(selectedCoordinate.latitude, selectedCoordinate.longitude)
+                    )
+                    lastAnimatedCoord = selectedCoordinate
+                }
             }
+            mapView.invalidate()
         }
     )
 
     DisposableEffect(Unit) {
         onDispose { }
     }
+}
+
+private fun getAnchorMarkerDrawable(context: Context): Drawable {
+    val drawable = ContextCompat.getDrawable(context, R.drawable.ic_anchor_marker)
+        ?: return ColorDrawable(android.graphics.Color.TRANSPARENT)
+    val density = context.resources.displayMetrics.density
+    val size = (36 * density).toInt().coerceAtLeast(1)
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, size, size)
+    drawable.draw(canvas)
+    return BitmapDrawable(context.resources, bitmap)
 }
 
 @Composable

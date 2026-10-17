@@ -37,6 +37,17 @@ interface GeoEngine {
     ): List<Coordinate>
 
     /**
+     * Generate an ordered list of [numberOfPoints] coordinates forming a closed polygon circle
+     * around [center] at [radiusMeters] distance.
+     * The points are ordered clockwise starting from bearing 0 (North).
+     */
+    fun generateCirclePolygon(
+        center: Coordinate,
+        radiusMeters: Double,
+        numberOfPoints: Int = 360
+    ): List<Coordinate>
+
+    /**
      * Validate that a coordinate is within valid ranges.
      */
     fun isValidCoordinate(latitude: Double, longitude: Double): Boolean
@@ -132,6 +143,24 @@ class GeoEngineImpl @Inject constructor() : GeoEngine {
         }
 
         return result
+    }
+
+    override fun generateCirclePolygon(
+        center: Coordinate,
+        radiusMeters: Double,
+        numberOfPoints: Int
+    ): List<Coordinate> {
+        if (radiusMeters <= 0.0 || numberOfPoints < 3) return emptyList()
+
+        val points = ArrayList<Coordinate>(numberOfPoints)
+        val stepDeg = 360.0 / numberOfPoints
+
+        for (i in 0 until numberOfPoints) {
+            val bearingDeg = i * stepDeg
+            points.add(destinationPoint(center, bearingDeg, radiusMeters))
+        }
+
+        return points
     }
 
     override fun isValidCoordinate(latitude: Double, longitude: Double): Boolean =

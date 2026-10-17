@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="36"
+    android:viewportHeight="36">
+    <!-- Pin shadow/border -->
+    <path
+        android:fillColor="#0F172A"
+        android:fillAlpha="0.3"
+        android:pathData="M18,35 C18,35 31,21.5 31,14 C31,6.8 25.2,1 18,1 C10.8,1 5,6.8 5,14 C5,21.5 18,35 18,35 Z" />
+    <!-- Pin Body (Royal Blue) -->
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M18,34 C18,34 30,20.8 30,14 C30,7.4 24.6,2 18,2 C11.4,2 6,7.4 6,14 C6,20.8 18,34 18,34 Z" />
+    <!-- Inner White Circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M18,7 C14.1,7 11,10.1 11,14 C11,17.9 14.1,21 18,21 C21.9,21 25,17.9 25,14 C25,10.1 21.9,7 18,7 Z" />
+    <!-- Center Anchor Bullseye (Deep Blue) -->
+    <path
+        android:fillColor="#1D4ED8"
+        android:pathData="M18,10 C15.8,10 14,11.8 14,14 C14,16.2 15.8,18 18,18 C20.2,18 22,16.2 22,14 C22,11.8 20.2,10 18,10 Z" />
+    <!-- Bullseye White Center Dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M18,12.5 C17.2,12.5 16.5,13.2 16.5,14 C16.5,14.8 17.2,15.5 18,15.5 C18.8,15.5 19.5,14.8 19.5,14 C19.5,13.2 18.8,12.5 18,12.5 Z" />
+</vector>

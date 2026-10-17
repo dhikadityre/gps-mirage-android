@@ -9,6 +9,7 @@ import com.dhikadityre.gpsmirage.domain.history.HistoryRepository
 import com.dhikadityre.gpsmirage.domain.location.LocationRepository
 import com.dhikadityre.gpsmirage.domain.location.MockLocationManager
 import com.dhikadityre.gpsmirage.domain.location.MockStartResult
+import com.dhikadityre.gpsmirage.domain.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +24,8 @@ import javax.inject.Inject
 class MapViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val mockLocationManager: MockLocationManager,
-    private val historyRepository: HistoryRepository
+    private val historyRepository: HistoryRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -33,8 +35,17 @@ class MapViewModel @Inject constructor(
 
     init {
         observeMockState()
+        observeRadiusConfig()
         loadRecentLocations()
         loadFavoriteLocations()
+    }
+
+    private fun observeRadiusConfig() {
+        viewModelScope.launch {
+            settingsRepository.radiusConfig.collectLatest { config ->
+                _uiState.update { it.copy(radiusConfig = config) }
+            }
+        }
     }
 
     private fun observeMockState() {
