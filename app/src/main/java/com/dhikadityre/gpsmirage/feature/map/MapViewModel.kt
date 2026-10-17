@@ -2,9 +2,11 @@ package com.dhikadityre.gpsmirage.feature.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dhikadityre.gpsmirage.core.geo.GeoEngine
 import com.dhikadityre.gpsmirage.core.model.Coordinate
 import com.dhikadityre.gpsmirage.core.model.History
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.RadiusConfig
 import com.dhikadityre.gpsmirage.domain.history.HistoryRepository
 import com.dhikadityre.gpsmirage.domain.location.LocationRepository
 import com.dhikadityre.gpsmirage.domain.location.MockLocationManager
@@ -25,7 +27,8 @@ class MapViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val mockLocationManager: MockLocationManager,
     private val historyRepository: HistoryRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val geoEngine: GeoEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -40,10 +43,30 @@ class MapViewModel @Inject constructor(
         loadFavoriteLocations()
     }
 
+    private fun calculateRadiusValidation(
+        coordinate: Coordinate?,
+        config: RadiusConfig
+    ): Pair<Double?, Boolean> {
+        if (coordinate == null) return null to true
+        if (!config.isEnabled || config.anchor == null) {
+            return null to true
+        }
+        val distance = geoEngine.distance(config.anchor, coordinate)
+        val isWithin = distance <= config.radiusMeters
+        return distance to isWithin
+    }
+
     private fun observeRadiusConfig() {
         viewModelScope.launch {
             settingsRepository.radiusConfig.collectLatest { config ->
-                _uiState.update { it.copy(radiusConfig = config) }
+                _uiState.update { ui ->
+                    val (dist, isWithin) = calculateRadiusValidation(ui.selectedCoordinate, config)
+                    ui.copy(
+                        radiusConfig = config,
+                        distanceToAnchorMeters = dist,
+                        isWithinRadius = isWithin
+                    )
+                }
             }
         }
     }
@@ -83,16 +106,26 @@ class MapViewModel @Inject constructor(
     }
 
     fun onMapTap(lat: Double, lng: Double) {
+        val selected = Coordinate(latitude = lat, longitude = lng)
+        val (dist, isWithin) = calculateRadiusValidation(selected, _uiState.value.radiusConfig)
         _uiState.update { ui ->
             ui.copy(
-                selectedCoordinate = Coordinate(latitude = lat, longitude = lng),
-                selectedLocationName = ""
+                selectedCoordinate = selected,
+                selectedLocationName = "",
+                distanceToAnchorMeters = dist,
+                isWithinRadius = isWithin
             )
         }
     }
 
     fun onStartMock() {
         val coordinate = _uiState.value.selectedCoordinate ?: return
+        if (!_uiState.value.isWithinRadius && _uiState.value.radiusConfig.isEnabled) {
+            _uiState.update {
+                it.copy(event = MapEvent.ShowSnackbar("Lokasi berada di luar batas radius"))
+            }
+            return
+        }
         val name = _uiState.value.selectedLocationName.ifBlank { "Unnamed Location" }
 
         val location = Location(
@@ -203,12 +236,22 @@ class MapViewModel @Inject constructor(
     }
 
     fun onQuickLocationTap(location: Location) {
+        val coordinate = Coordinate(location.latitude, location.longitude)
+        val (dist, isWithin) = calculateRadiusValidation(coordinate, _uiState.value.radiusConfig)
         _uiState.update { ui ->
             ui.copy(
-                selectedCoordinate = Coordinate(location.latitude, location.longitude),
+                selectedCoordinate = coordinate,
                 selectedLocationName = location.name,
+                distanceToAnchorMeters = dist,
+                isWithinRadius = isWithin,
                 isQuickLocationsVisible = false
             )
+        }
+        if (!isWithin && _uiState.value.radiusConfig.isEnabled) {
+            _uiState.update {
+                it.copy(event = MapEvent.ShowSnackbar("Lokasi berada di luar batas radius"))
+            }
+            return
         }
         executeStartMock(location)
     }

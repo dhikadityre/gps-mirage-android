@@ -14,6 +14,8 @@ data class MapUiState(
     val favoriteLocations: List<Location> = emptyList(),
     val isQuickLocationsVisible: Boolean = false,
     val radiusConfig: RadiusConfig = RadiusConfig(),
+    val distanceToAnchorMeters: Double? = null,
+    val isWithinRadius: Boolean = true,
     val error: String? = null,
     val event: MapEvent? = null
 )

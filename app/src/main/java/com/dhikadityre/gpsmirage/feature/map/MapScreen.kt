@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -200,6 +202,9 @@ fun MapScreen(
                     coordinate = uiState.selectedCoordinate!!,
                     locationName = uiState.selectedLocationName,
                     isLoading = uiState.isLoading,
+                    radiusConfig = uiState.radiusConfig,
+                    distanceToAnchorMeters = uiState.distanceToAnchorMeters,
+                    isWithinRadius = uiState.isWithinRadius,
                     onSave = { name ->
                         viewModel.onSaveLocation(name)
                         onSaveLocation(
@@ -425,6 +430,9 @@ private fun SelectedCoordinateCard(
     coordinate: Coordinate,
     locationName: String,
     isLoading: Boolean,
+    radiusConfig: RadiusConfig,
+    distanceToAnchorMeters: Double?,
+    isWithinRadius: Boolean,
     onSave: (String) -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier
@@ -459,6 +467,69 @@ private fun SelectedCoordinateCard(
                 textAlign = TextAlign.Center
             )
 
+            // Geofence Radius Info & Warning Badge
+            if (radiusConfig.isEnabled && distanceToAnchorMeters != null) {
+                if (!isWithinRadius) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Di luar batas radius",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Text(
+                            text = "Jarak ke acuan: ${distanceToAnchorMeters.toInt()} meter",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Jarak ke acuan: ${distanceToAnchorMeters.toInt()} meter",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Batas: ${radiusConfig.radiusMeters.toInt()}m",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -472,7 +543,7 @@ private fun SelectedCoordinateCard(
                 }
                 ElevatedButton(
                     onClick = onStart,
-                    enabled = !isLoading,
+                    enabled = !isLoading && isWithinRadius,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.elevatedButtonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -486,7 +557,7 @@ private fun SelectedCoordinateCard(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("START", fontWeight = FontWeight.Bold)
+                        Text("START MOCK", fontWeight = FontWeight.Bold)
                     }
                 }
             }
