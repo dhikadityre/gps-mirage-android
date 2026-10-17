@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -137,7 +138,9 @@ fun SettingsScreen(
 
             // Card 1: Toggle Switch Card
             ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.onRadiusToggleChanged(!uiState.radiusConfig.isEnabled) },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = if (uiState.radiusConfig.isEnabled) {

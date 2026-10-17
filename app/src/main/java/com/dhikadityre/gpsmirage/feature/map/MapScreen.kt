@@ -313,6 +313,11 @@ private fun OsmMapView(
                     snippet = "Radius: ${radiusConfig.radiusMeters.toInt()}m"
                 }
                 mapView.overlays.add(anchorMarker)
+
+                if (selectedCoordinate == null && lastAnimatedCoord == null) {
+                    mapView.controller.animateTo(anchorGeoPoint)
+                    lastAnimatedCoord = radiusConfig.anchor
+                }
             }
 
             // Render Selected Coordinate Marker
