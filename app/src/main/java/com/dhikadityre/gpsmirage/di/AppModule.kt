@@ -6,6 +6,8 @@ import com.dhikadityre.gpsmirage.core.geo.GeoEngine
 import com.dhikadityre.gpsmirage.core.geo.GeoEngineImpl
 import com.dhikadityre.gpsmirage.core.parser.LocationParser
 import com.dhikadityre.gpsmirage.core.parser.LocationParserImpl
+import com.dhikadityre.gpsmirage.core.location.DeviceLocationProvider
+import com.dhikadityre.gpsmirage.core.location.DeviceLocationProviderImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -33,4 +35,10 @@ abstract class AppModule {
     abstract fun bindLocationParser(
         impl: LocationParserImpl
     ): LocationParser
+
+    @Binds
+    @Singleton
+    abstract fun bindDeviceLocationProvider(
+        impl: DeviceLocationProviderImpl
+    ): DeviceLocationProvider
 }
