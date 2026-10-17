@@ -19,10 +19,13 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 @Singleton
-class AndroidReverseGeocoderImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+class AndroidReverseGeocoderImpl(
+    private val context: Context,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ReverseGeocoder {
+
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context, Dispatchers.IO)
 
     override suspend fun getShortAddress(coordinate: Coordinate): GeocodeResult? {
         if (!Geocoder.isPresent()) {

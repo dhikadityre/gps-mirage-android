@@ -17,10 +17,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.dhikadityre.gpsmirage.core.geo.ReverseGeocoder
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
@@ -28,13 +30,15 @@ class MapViewModel @Inject constructor(
     private val mockLocationManager: MockLocationManager,
     private val historyRepository: HistoryRepository,
     private val settingsRepository: SettingsRepository,
-    private val geoEngine: GeoEngine
+    private val geoEngine: GeoEngine,
+    private val reverseGeocoder: ReverseGeocoder
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
 
     private var activeHistorySessionId: Long? = null
+    private var addressResolutionJob: Job? = null
 
     init {
         observeMockState()
@@ -108,13 +112,33 @@ class MapViewModel @Inject constructor(
     fun onMapTap(lat: Double, lng: Double) {
         val selected = Coordinate(latitude = lat, longitude = lng)
         val (dist, isWithin) = calculateRadiusValidation(selected, _uiState.value.radiusConfig)
+
+        addressResolutionJob?.cancel()
+
         _uiState.update { ui ->
             ui.copy(
                 selectedCoordinate = selected,
                 selectedLocationName = "",
+                resolvedShortAddress = null,
+                isResolvingAddress = true,
                 distanceToAnchorMeters = dist,
                 isWithinRadius = isWithin
             )
+        }
+
+        addressResolutionJob = viewModelScope.launch {
+            val result = reverseGeocoder.getShortAddress(selected)
+            _uiState.update { ui ->
+                if (ui.selectedCoordinate == selected) {
+                    ui.copy(
+                        isResolvingAddress = false,
+                        resolvedShortAddress = result?.shortAddress,
+                        selectedLocationName = result?.shortAddress ?: ""
+                    )
+                } else {
+                    ui
+                }
+            }
         }
     }
 
@@ -236,12 +260,15 @@ class MapViewModel @Inject constructor(
     }
 
     fun onQuickLocationTap(location: Location) {
+        addressResolutionJob?.cancel()
         val coordinate = Coordinate(location.latitude, location.longitude)
         val (dist, isWithin) = calculateRadiusValidation(coordinate, _uiState.value.radiusConfig)
         _uiState.update { ui ->
             ui.copy(
                 selectedCoordinate = coordinate,
                 selectedLocationName = location.name,
+                resolvedShortAddress = location.name,
+                isResolvingAddress = false,
                 distanceToAnchorMeters = dist,
                 isWithinRadius = isWithin,
                 isQuickLocationsVisible = false

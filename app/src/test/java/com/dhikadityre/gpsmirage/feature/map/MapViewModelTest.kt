@@ -6,6 +6,8 @@ import com.dhikadityre.gpsmirage.core.model.Location
 import com.dhikadityre.gpsmirage.core.model.RadiusConfig
 import com.dhikadityre.gpsmirage.domain.history.HistoryRepository
 import com.dhikadityre.gpsmirage.domain.location.LocationRepository
+import com.dhikadityre.gpsmirage.core.geo.ReverseGeocoder
+import com.dhikadityre.gpsmirage.core.model.GeocodeResult
 import com.dhikadityre.gpsmirage.domain.location.MockLocationManager
 import com.dhikadityre.gpsmirage.domain.location.MockStartResult
 import com.dhikadityre.gpsmirage.domain.settings.SettingsRepository
@@ -97,14 +99,32 @@ class MapViewModelTest {
         }
     }
 
+    private class FakeReverseGeocoder : ReverseGeocoder {
+        var resultToReturn: GeocodeResult? = GeocodeResult(shortAddress = "Jl. Sudirman No. 10")
+        var delayMs: Long = 0L
+        var callsCount = 0
+        var lastCoordinate: Coordinate? = null
+
+        override suspend fun getShortAddress(coordinate: Coordinate): GeocodeResult? {
+            callsCount++
+            lastCoordinate = coordinate
+            if (delayMs > 0) {
+                kotlinx.coroutines.delay(delayMs)
+            }
+            return resultToReturn
+        }
+    }
+
     private lateinit var fakeSettingsRepository: FakeSettingsRepository
     private lateinit var mockLocationManager: RecordingMockLocationManager
+    private lateinit var fakeReverseGeocoder: FakeReverseGeocoder
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeSettingsRepository = FakeSettingsRepository()
         mockLocationManager = RecordingMockLocationManager()
+        fakeReverseGeocoder = FakeReverseGeocoder()
     }
 
     @After
@@ -112,13 +132,16 @@ class MapViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(): MapViewModel {
+    private fun createViewModel(
+        reverseGeocoder: ReverseGeocoder = fakeReverseGeocoder
+    ): MapViewModel {
         return MapViewModel(
             locationRepository = fakeLocationRepository,
             mockLocationManager = mockLocationManager,
             historyRepository = fakeHistoryRepository,
             settingsRepository = fakeSettingsRepository,
-            geoEngine = geoEngine
+            geoEngine = geoEngine,
+            reverseGeocoder = reverseGeocoder
         )
     }
 
@@ -271,6 +294,64 @@ class MapViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.isWithinRadius)
+    }
+
+    @Test
+    fun `onMapTap sets isResolvingAddress and resolves address into state`() = runTest(testDispatcher) {
+        fakeReverseGeocoder.resultToReturn = GeocodeResult(shortAddress = "Jl. Jenderal Sudirman No. 10")
+        fakeReverseGeocoder.delayMs = 100L
+        val viewModel = createViewModel()
+
+        viewModel.onMapTap(-6.2088, 106.8456)
+
+        assertEquals(true, viewModel.uiState.value.isResolvingAddress)
+        assertEquals(null, viewModel.uiState.value.resolvedShortAddress)
+        assertEquals("", viewModel.uiState.value.selectedLocationName)
+
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.isResolvingAddress)
+        assertEquals("Jl. Jenderal Sudirman No. 10", viewModel.uiState.value.resolvedShortAddress)
+        assertEquals("Jl. Jenderal Sudirman No. 10", viewModel.uiState.value.selectedLocationName)
+    }
+
+    @Test
+    fun `onMapTap handles geocoder null result safely`() = runTest(testDispatcher) {
+        fakeReverseGeocoder.resultToReturn = null
+        val viewModel = createViewModel()
+
+        viewModel.onMapTap(-6.2088, 106.8456)
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.isResolvingAddress)
+        assertNull(viewModel.uiState.value.resolvedShortAddress)
+        assertEquals("", viewModel.uiState.value.selectedLocationName)
+    }
+
+    @Test
+    fun `rapid consecutive onMapTap calls cancel in-flight resolution and only apply latest`() = runTest(testDispatcher) {
+        val customGeocoder = object : ReverseGeocoder {
+            override suspend fun getShortAddress(coordinate: Coordinate): GeocodeResult? {
+                if (coordinate.latitude == -6.1) {
+                    kotlinx.coroutines.delay(500L)
+                    return GeocodeResult(shortAddress = "Old Street")
+                } else {
+                    kotlinx.coroutines.delay(100L)
+                    return GeocodeResult(shortAddress = "Latest Street")
+                }
+            }
+        }
+        val viewModel = createViewModel(reverseGeocoder = customGeocoder)
+
+        viewModel.onMapTap(-6.1, 106.1)
+        viewModel.onMapTap(-6.2, 106.2)
+
+        advanceUntilIdle()
+
+        assertEquals(Coordinate(-6.2, 106.2), viewModel.uiState.value.selectedCoordinate)
+        assertEquals("Latest Street", viewModel.uiState.value.resolvedShortAddress)
+        assertEquals("Latest Street", viewModel.uiState.value.selectedLocationName)
+        assertEquals(false, viewModel.uiState.value.isResolvingAddress)
     }
 }
 

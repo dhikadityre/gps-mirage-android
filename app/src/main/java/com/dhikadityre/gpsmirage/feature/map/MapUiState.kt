@@ -7,6 +7,8 @@ import com.dhikadityre.gpsmirage.core.model.RadiusConfig
 data class MapUiState(
     val selectedCoordinate: Coordinate? = null,
     val selectedLocationName: String = "",
+    val isResolvingAddress: Boolean = false,
+    val resolvedShortAddress: String? = null,
     val isLoading: Boolean = false,
     val isMockActive: Boolean = false,
     val activeMockLocation: Location? = null,
