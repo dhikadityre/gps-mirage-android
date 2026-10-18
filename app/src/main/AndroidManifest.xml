@@ -14,13 +14,7 @@
     <!-- Internet for OSMDroid tile download -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <!-- Storage for OSMDroid tile cache -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28"
-        tools:ignore="ScopedStorage" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+    <!-- OSMDroid tile cache is isolated in internal cacheDir (no external storage permissions required) -->
 
     <!-- Foreground service for mock location -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
