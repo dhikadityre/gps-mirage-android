@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -54,6 +55,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.TouchApp
@@ -64,6 +66,9 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
+import com.dhikadityre.gpsmirage.core.geo.MapIntentHelper
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
@@ -338,6 +343,14 @@ fun MapScreen(
                 MockActiveBanner(
                     location = uiState.activeMockLocation,
                     isLoading = uiState.isLoading,
+                    onOpenGoogleMaps = {
+                        val activeLoc = uiState.activeMockLocation
+                        if (activeLoc != null) {
+                            MapIntentHelper.launchMaps(context, activeLoc.latitude, activeLoc.longitude, activeLoc.name)
+                        } else if (uiState.selectedCoordinate != null) {
+                            MapIntentHelper.launchMaps(context, uiState.selectedCoordinate!!.latitude, uiState.selectedCoordinate!!.longitude)
+                        }
+                    },
                     onStop = { viewModel.onStopMock() },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -358,6 +371,10 @@ fun MapScreen(
                     isWithinRadius = uiState.isWithinRadius,
                     isPositionLocked = uiState.isPositionLocked,
                     onTogglePositionLock = { viewModel.togglePositionLock() },
+                    onOpenGoogleMaps = {
+                        val coord = uiState.selectedCoordinate!!
+                        MapIntentHelper.launchMaps(context, coord.latitude, coord.longitude, uiState.selectedLocationName)
+                    },
                     onSave = { name ->
                         viewModel.onSaveLocation(name)
                         onSaveLocation(
@@ -661,6 +678,7 @@ private fun getAnchorMarkerDrawable(context: Context): Drawable {
 private fun MockActiveBanner(
     location: Location?,
     isLoading: Boolean,
+    onOpenGoogleMaps: () -> Unit = {},
     onStop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -673,7 +691,7 @@ private fun MockActiveBanner(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -682,7 +700,7 @@ private fun MockActiveBanner(
                     text = "● MOCK LOCATION ACTIVE",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     letterSpacing = 0.5.sp
                 )
                 if (location != null) {
@@ -692,7 +710,7 @@ private fun MockActiveBanner(
                         fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 2.dp)
+                        modifier = Modifier.padding(top = 1.dp)
                     )
                     Text(
                         text = "%.6f, %.6f".format(location.latitude, location.longitude),
@@ -703,19 +721,42 @@ private fun MockActiveBanner(
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = onStop,
-                enabled = !isLoading,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
+                FilledTonalButton(
+                    onClick = onOpenGoogleMaps,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = Color.White.copy(alpha = 0.2f),
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = "Buka Google Maps",
+                        modifier = Modifier.size(15.dp)
                     )
-                } else {
-                    Text("STOP", color = Color.White, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Maps", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = onStop,
+                    enabled = !isLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("STOP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -734,6 +775,7 @@ private fun SelectedCoordinateCard(
     isWithinRadius: Boolean,
     isPositionLocked: Boolean = false,
     onTogglePositionLock: () -> Unit = {},
+    onOpenGoogleMaps: () -> Unit = {},
     onSave: (String) -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier
@@ -892,6 +934,24 @@ private fun SelectedCoordinateCard(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                }
+
+                OutlinedButton(
+                    onClick = onOpenGoogleMaps,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Buka di Google Maps",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 

@@ -17,11 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dhikadityre.gpsmirage.core.geo.MapIntentHelper
 import com.dhikadityre.gpsmirage.core.model.AnchorWithMocks
 import com.dhikadityre.gpsmirage.core.model.Location
 import com.dhikadityre.gpsmirage.core.model.LocationType
@@ -36,12 +38,25 @@ fun LocationsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    var selectedAnchorForGenerate by remember { mutableStateOf<Location?>(null) }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { msg ->
             snackbarHostState.showSnackbar(msg)
             viewModel.clearUserMessage()
         }
+    }
+
+    selectedAnchorForGenerate?.let { anchor ->
+        GenerateSubMockDialog(
+            anchor = anchor,
+            onDismiss = { selectedAnchorForGenerate = null },
+            onConfirm = { count ->
+                viewModel.generateSubMocks(anchor, count)
+                selectedAnchorForGenerate = null
+            }
+        )
     }
 
     Scaffold(
@@ -214,6 +229,9 @@ fun LocationsScreen(
                                     onClick = { onLocationClick(anchor.id) },
                                     onToggleFavorite = { viewModel.onToggleFavorite(anchor.id, anchor.isFavorite) },
                                     onDelete = { viewModel.onDeleteRequest(anchor) },
+                                    onOpenGoogleMaps = {
+                                        MapIntentHelper.launchMaps(context, anchor.latitude, anchor.longitude, anchor.name)
+                                    },
                                     onPreview = {
                                         viewModel.onPreviewLocation(anchor, parentAnchor = null, onNavigateToMap)
                                     },
@@ -264,6 +282,9 @@ fun LocationsScreen(
                                     onClick = { onLocationClick(mockLocation.id) },
                                     onToggleFavorite = { viewModel.onToggleFavorite(mockLocation.id, mockLocation.isFavorite) },
                                     onDelete = { viewModel.onDeleteRequest(mockLocation) },
+                                    onOpenGoogleMaps = {
+                                        MapIntentHelper.launchMaps(context, mockLocation.latitude, mockLocation.longitude, mockLocation.name)
+                                    },
                                     onPreview = {
                                         viewModel.onPreviewLocation(mockLocation, parentAnchor = parentAnchor, onNavigateToMap)
                                     },
@@ -300,9 +321,18 @@ fun LocationsScreen(
                                     onPreviewAnchor = {
                                         viewModel.onPreviewLocation(anchorWithMocks.anchor, parentAnchor = null, onNavigateToMap)
                                     },
+                                    onGenerateSubMock = {
+                                        selectedAnchorForGenerate = anchorWithMocks.anchor
+                                    },
+                                    onOpenGoogleMapsAnchor = {
+                                        MapIntentHelper.launchMaps(context, anchorWithMocks.anchor.latitude, anchorWithMocks.anchor.longitude, anchorWithMocks.anchor.name)
+                                    },
                                     onSubMockClick = onLocationClick,
                                     onPreviewSubMock = { subMock ->
                                         viewModel.onPreviewLocation(subMock, parentAnchor = anchorWithMocks.anchor, onNavigateToMap)
+                                    },
+                                    onOpenGoogleMapsSubMock = { subMock ->
+                                        MapIntentHelper.launchMaps(context, subMock.latitude, subMock.longitude, subMock.name)
                                     },
                                     onToggleFavorite = { loc -> viewModel.onToggleFavorite(loc.id, loc.isFavorite) },
                                     onDeleteLocation = { loc -> viewModel.onDeleteRequest(loc) }
@@ -347,6 +377,9 @@ fun LocationsScreen(
                                     onClick = { onLocationClick(nativeLocation.id) },
                                     onToggleFavorite = { viewModel.onToggleFavorite(nativeLocation.id, nativeLocation.isFavorite) },
                                     onDelete = { viewModel.onDeleteRequest(nativeLocation) },
+                                    onOpenGoogleMaps = {
+                                        MapIntentHelper.launchMaps(context, nativeLocation.latitude, nativeLocation.longitude, nativeLocation.name)
+                                    },
                                     onPreview = {
                                         viewModel.onPreviewLocation(nativeLocation, parentAnchor = null, onNavigateToMap)
                                     },
@@ -399,6 +432,7 @@ private fun LocationCardItem(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDelete: () -> Unit,
+    onOpenGoogleMaps: () -> Unit = {},
     onPreview: () -> Unit,
     onLinkToAnchor: (Long) -> Unit
 ) {
@@ -433,6 +467,19 @@ private fun LocationCardItem(
                             color = tagContentColor,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
+                    }
+                    if (location.isGenerated) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                text = "Generated",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                     if (parentAnchorName != null) {
                         Surface(
@@ -507,7 +554,20 @@ private fun LocationCardItem(
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             DropdownMenuItem(
+                                text = { Text("Buka di Google Maps") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onOpenGoogleMaps()
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Edit") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                },
                                 onClick = {
                                     showMenu = false
                                     onClick()
@@ -515,6 +575,9 @@ private fun LocationCardItem(
                             )
                             DropdownMenuItem(
                                 text = { Text("Delete") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                },
                                 onClick = {
                                     showMenu = false
                                     onDelete()
@@ -601,8 +664,11 @@ private fun GroupedAnchorCardItem(
     onToggleExpand: () -> Unit,
     onAnchorClick: () -> Unit,
     onPreviewAnchor: () -> Unit,
+    onGenerateSubMock: () -> Unit,
+    onOpenGoogleMapsAnchor: () -> Unit,
     onSubMockClick: (Long) -> Unit,
     onPreviewSubMock: (Location) -> Unit,
+    onOpenGoogleMapsSubMock: (Location) -> Unit,
     onToggleFavorite: (Location) -> Unit,
     onDeleteLocation: (Location) -> Unit
 ) {
@@ -693,6 +759,65 @@ private fun GroupedAnchorCardItem(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+
+                        var showAnchorMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(
+                                onClick = { showAnchorMenu = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "Menu Anchor",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showAnchorMenu,
+                                onDismissRequest = { showAnchorMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Generate Sub-Mock") },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showAnchorMenu = false
+                                        onGenerateSubMock()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Buka di Google Maps") },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showAnchorMenu = false
+                                        onOpenGoogleMapsAnchor()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Edit") },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showAnchorMenu = false
+                                        onAnchorClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showAnchorMenu = false
+                                        onDeleteLocation(item.anchor)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -752,16 +877,34 @@ private fun GroupedAnchorCardItem(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Surface(
-                                            shape = RoundedCornerShape(4.dp),
-                                            color = MaterialTheme.colorScheme.tertiaryContainer
+                                        FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalArrangement = Arrangement.spacedBy(2.dp)
                                         ) {
-                                            Text(
-                                                text = "Sub-Mock",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = MaterialTheme.colorScheme.tertiaryContainer
+                                            ) {
+                                                Text(
+                                                    text = "Sub-Mock",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                            if (subMock.isGenerated) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                                ) {
+                                                    Text(
+                                                        text = "Generated",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
                                         }
                                         Spacer(Modifier.height(2.dp))
                                         Text(
@@ -809,6 +952,55 @@ private fun GroupedAnchorCardItem(
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
+
+                                        var showSubMockMenu by remember { mutableStateOf(false) }
+                                        Box {
+                                            IconButton(
+                                                onClick = { showSubMockMenu = true },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.MoreVert,
+                                                    contentDescription = "Menu Sub-Mock",
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                            DropdownMenu(
+                                                expanded = showSubMockMenu,
+                                                onDismissRequest = { showSubMockMenu = false }
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Buka di Google Maps") },
+                                                    leadingIcon = {
+                                                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                    },
+                                                    onClick = {
+                                                        showSubMockMenu = false
+                                                        onOpenGoogleMapsSubMock(subMock)
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("Edit") },
+                                                    leadingIcon = {
+                                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                    },
+                                                    onClick = {
+                                                        showSubMockMenu = false
+                                                        onSubMockClick(subMock.id)
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("Delete") },
+                                                    leadingIcon = {
+                                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                    },
+                                                    onClick = {
+                                                        showSubMockMenu = false
+                                                        onDeleteLocation(subMock)
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -818,6 +1010,103 @@ private fun GroupedAnchorCardItem(
             }
         }
     }
+}
+
+@Composable
+fun GenerateSubMockDialog(
+    anchor: Location,
+    onDismiss: () -> Unit,
+    onConfirm: (count: Int) -> Unit
+) {
+    var count by remember { mutableStateOf(3) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Generate Sub-Mock",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Buat titik sub-mock acak realistis di dalam radius ${anchor.radiusMeters?.toInt() ?: 500}m dari Center Anchor \"${anchor.name}\".",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Jumlah Titik",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilledTonalIconButton(
+                                onClick = { if (count > 1) count-- },
+                                enabled = count > 1,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Text("-", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            }
+                            Text(
+                                text = "$count",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.widthIn(min = 20.dp)
+                            )
+                            FilledTonalIconButton(
+                                onClick = { if (count < 10) count++ },
+                                enabled = count < 10,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Text("+", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    text = "• Telemetri dihitung realistis (ketinggian tanah perkotaan 10m - 25m, akurasi 3.5m - 8.5m, posisi diam 0 m/s).\n• Titik hasil generate ditandai dengan label 'Generated'.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(count) }
+            ) {
+                Text("Generate ($count Titik)")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }
 
 @Composable

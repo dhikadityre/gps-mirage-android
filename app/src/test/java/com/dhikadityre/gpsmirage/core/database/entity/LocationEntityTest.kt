@@ -49,4 +49,29 @@ class LocationEntityTest {
         val domain = entity.toDomain()
         assertEquals(LocationType.MOCK_TARGET, domain.type)
     }
+
+    @Test
+    fun `toDomain and fromDomain correctly preserve isGenerated flag`() {
+        val domain = Location(
+            id = 99L,
+            name = "Mock 01",
+            latitude = -6.2,
+            longitude = 106.8,
+            isGenerated = true
+        )
+        val entity = LocationEntity.fromDomain(domain)
+        assertEquals(true, entity.isGenerated)
+
+        val mappedBack = entity.toDomain()
+        assertEquals(true, mappedBack.isGenerated)
+
+        val defaultEntity = LocationEntity(
+            id = 101L,
+            name = "Default",
+            latitude = 0.0,
+            longitude = 0.0
+        )
+        assertEquals(false, defaultEntity.isGenerated)
+        assertEquals(false, defaultEntity.toDomain().isGenerated)
+    }
 }

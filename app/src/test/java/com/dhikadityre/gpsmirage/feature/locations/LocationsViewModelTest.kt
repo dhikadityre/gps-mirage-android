@@ -65,13 +65,19 @@ class LocationsViewModelTest {
                 LocationType.NATIVE -> nativeLocationsFlow.value
             }
 
-        override suspend fun getChildrenOfAnchor(anchorId: Long): List<Location> = emptyList()
+        var lastSavedLocations: List<Location>? = null
+        var mockChildrenOfAnchor: List<Location> = emptyList()
+
+        override suspend fun getChildrenOfAnchor(anchorId: Long): List<Location> = mockChildrenOfAnchor
         override suspend fun getFavorites(): List<Location> = emptyList()
         override suspend fun getByFolder(folderId: Long): List<Location> = emptyList()
         override suspend fun getRecent(limit: Int): List<Location> = emptyList()
         override suspend fun search(query: String): List<Location> = emptyList()
         override suspend fun save(location: Location): Long = 1L
-        override suspend fun saveAll(locations: List<Location>): List<Long> = emptyList()
+        override suspend fun saveAll(locations: List<Location>): List<Long> {
+            lastSavedLocations = locations
+            return locations.mapIndexed { idx, _ -> idx.toLong() }
+        }
         override suspend fun update(location: Location) {}
         override suspend fun updateFavorite(id: Long, isFavorite: Boolean) {}
         override suspend fun updateFolder(id: Long, folderId: Long?) {}
@@ -275,4 +281,51 @@ class LocationsViewModelTest {
         viewModel.onTabSelected(LocationsTab.NATIVE)
         assertEquals(LocationsTab.NATIVE, viewModel.uiState.value.selectedTab)
     }
+
+    @Test
+    fun `generateSubMocks creates realistic sub-mocks and expands anchor`() = runTest(testDispatcher) {
+        val anchor = Location(
+            id = 10L,
+            name = "Main Base",
+            latitude = -6.2088,
+            longitude = 106.8456,
+            type = LocationType.CENTER_ANCHOR,
+            radiusMeters = 100.0,
+            altitude = 15.0
+        )
+        val existingMock = Location(
+            id = 11L,
+            name = "Main Base - Mock 01",
+            latitude = -6.2089,
+            longitude = 106.8457,
+            type = LocationType.MOCK_TARGET,
+            parentAnchorId = 10L
+        )
+        fakeLocationRepository.mockChildrenOfAnchor = listOf(existingMock)
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.generateSubMocks(anchor, count = 3)
+        advanceUntilIdle()
+
+        val saved = fakeLocationRepository.lastSavedLocations
+        assertNotNull(saved)
+        assertEquals(3, saved?.size)
+        assertEquals("Mock 02", saved?.get(0)?.name)
+        assertEquals("Mock 03", saved?.get(1)?.name)
+        assertEquals("Mock 04", saved?.get(2)?.name)
+
+        saved?.forEach { mock ->
+            assertTrue(mock.isGenerated)
+            assertEquals(10L, mock.parentAnchorId)
+            assertEquals(LocationType.MOCK_TARGET, mock.type)
+            assertTrue(mock.altitude in 5.0..35.0)
+            assertEquals(0.0f, mock.speed)
+        }
+
+        assertTrue(viewModel.uiState.value.expandedAnchorIds.contains(10L))
+        assertEquals("Berhasil membuat 3 sub-mock untuk Main Base", viewModel.uiState.value.userMessage)
+    }
 }
+

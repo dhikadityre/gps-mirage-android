@@ -47,6 +47,8 @@ data class LocationEntity(
     val bearing: Float = 0f,
     @ColumnInfo(name = "is_favorite")
     val isFavorite: Boolean = false,
+    @ColumnInfo(name = "is_generated", defaultValue = "0")
+    val isGenerated: Boolean = false,
     @ColumnInfo(name = "folder_id")
     val folderId: Long? = null,
     @ColumnInfo(name = "created_at")
@@ -71,6 +73,7 @@ data class LocationEntity(
         speed = speed,
         bearing = bearing,
         isFavorite = isFavorite,
+        isGenerated = isGenerated,
         folderId = folderId,
         createdAt = createdAt,
         updatedAt = updatedAt
@@ -90,6 +93,7 @@ data class LocationEntity(
             speed = location.speed,
             bearing = location.bearing,
             isFavorite = location.isFavorite,
+            isGenerated = location.isGenerated,
             folderId = location.folderId,
             createdAt = location.createdAt,
             updatedAt = System.currentTimeMillis()

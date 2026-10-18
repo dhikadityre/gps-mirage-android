@@ -179,5 +179,23 @@ class LocationsViewModel @Inject constructor(
     fun onStartMock(location: Location) {
         mockLocationManager.start(location)
     }
+
+    fun generateSubMocks(anchor: Location, count: Int) {
+        viewModelScope.launch {
+            val existing = locationRepository.getChildrenOfAnchor(anchor.id)
+            val newMocks = geoEngine.generateRealisticSubMocks(
+                anchor = anchor,
+                count = count,
+                startIndex = existing.size + 1
+            )
+            locationRepository.saveAll(newMocks)
+            _uiState.update { state ->
+                state.copy(
+                    expandedAnchorIds = state.expandedAnchorIds + anchor.id,
+                    userMessage = "Berhasil membuat $count sub-mock untuk ${anchor.name}"
+                )
+            }
+        }
+    }
 }
 

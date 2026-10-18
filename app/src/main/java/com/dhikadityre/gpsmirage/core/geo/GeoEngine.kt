@@ -1,12 +1,16 @@
 package com.dhikadityre.gpsmirage.core.geo
 
 import com.dhikadityre.gpsmirage.core.model.Coordinate
+import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.LocationType
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.PI
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -35,6 +39,18 @@ interface GeoEngine {
         radiusMeters: Double,
         count: Int
     ): List<Coordinate>
+
+    /**
+     * Generate realistic child sub-mock locations within the given center anchor's radius.
+     * Incorporates realistic urban ground altitude (10m - 25m with natural micro-jitter, max 35m),
+     * realistic mobile GPS accuracy (3.5m - 8.5m), stationary speed (0 m/s),
+     * and random natural bearing (0 - 360 deg).
+     */
+    fun generateRealisticSubMocks(
+        anchor: Location,
+        count: Int,
+        startIndex: Int = 1
+    ): List<Location>
 
     /**
      * Generate an ordered list of [numberOfPoints] coordinates forming a closed polygon circle
@@ -143,6 +159,50 @@ class GeoEngineImpl @Inject constructor() : GeoEngine {
         }
 
         return result
+    }
+
+    override fun generateRealisticSubMocks(
+        anchor: Location,
+        count: Int,
+        startIndex: Int
+    ): List<Location> {
+        if (count <= 0) return emptyList()
+        val radius = anchor.radiusMeters ?: 500.0
+        val center = anchor.coordinate
+        val points = generatePointsWithinRadius(center, radius, count)
+        val random = java.util.Random()
+
+        // Realistic ground level baseline (10m - 25m). If anchor altitude is reasonable (1m..35m), use it.
+        val baseAltitude = if (anchor.altitude in 1.0..35.0) {
+            anchor.altitude
+        } else {
+            12.0 + random.nextDouble() * 10.0 // 12m to 22m
+        }
+
+        return points.mapIndexed { idx, coord ->
+            val altJitter = (random.nextDouble() - 0.5) * 3.0 // -1.5m to +1.5m
+            val calculatedAltitude = ((baseAltitude + altJitter).coerceIn(5.0, 35.0) * 10.0).roundToLong() / 10.0
+            val calculatedAccuracy = ((3.5f + random.nextFloat() * 4.5f) * 10f).roundToInt() / 10f
+            val calculatedBearing = (random.nextFloat() * 360f * 10f).roundToInt() / 10f
+            val num = startIndex + idx
+
+            Location(
+                name = "Mock %02d".format(num),
+                latitude = coord.latitude,
+                longitude = coord.longitude,
+                type = LocationType.MOCK_TARGET,
+                parentAnchorId = anchor.id,
+                radiusMeters = null,
+                accuracy = calculatedAccuracy,
+                altitude = calculatedAltitude,
+                speed = 0f,
+                bearing = calculatedBearing,
+                isGenerated = true,
+                folderId = anchor.folderId,
+                createdAt = System.currentTimeMillis() + idx,
+                updatedAt = System.currentTimeMillis() + idx
+            )
+        }
     }
 
     override fun generateCirclePolygon(

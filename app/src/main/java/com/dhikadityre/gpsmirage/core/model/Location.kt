@@ -31,6 +31,7 @@ data class Location(
     val speed: Float = 0f,
     val bearing: Float = 0f,
     val isFavorite: Boolean = false,
+    val isGenerated: Boolean = false,
     val folderId: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()

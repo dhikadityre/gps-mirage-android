@@ -21,7 +21,7 @@ import com.dhikadityre.gpsmirage.core.database.entity.ReminderAlarmEntity
         DefaultProfileEntity::class,
         ReminderAlarmEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class GpsMirageDatabase : RoomDatabase() {
