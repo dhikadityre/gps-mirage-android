@@ -2,14 +2,18 @@ package com.dhikadityre.gpsmirage.feature.locations
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dhikadityre.gpsmirage.core.geo.GeoEngine
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.LocationType
 import com.dhikadityre.gpsmirage.domain.folder.FolderRepository
 import com.dhikadityre.gpsmirage.domain.location.LocationRepository
+import com.dhikadityre.gpsmirage.domain.location.MapPreviewCoordinator
 import com.dhikadityre.gpsmirage.domain.location.MockLocationManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -18,7 +22,9 @@ import javax.inject.Inject
 class LocationsViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val folderRepository: FolderRepository,
-    private val mockLocationManager: MockLocationManager
+    private val mockLocationManager: MockLocationManager,
+    private val mapPreviewCoordinator: MapPreviewCoordinator,
+    private val geoEngine: GeoEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LocationsUiState(isLoading = true))
@@ -30,24 +36,91 @@ class LocationsViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch {
-            locationRepository.getAllFlow().collect { locs ->
-                _uiState.update { it.copy(allLocations = locs, isLoading = false) }
-            }
-        }
-        viewModelScope.launch {
-            locationRepository.getFavoritesFlow().collect { favs ->
-                _uiState.update { it.copy(favorites = favs) }
-            }
-        }
-        viewModelScope.launch {
-            folderRepository.getAllFlow().collect { folders ->
-                _uiState.update { it.copy(folders = folders) }
+            combine(
+                locationRepository.getByTypeFlow(LocationType.CENTER_ANCHOR),
+                locationRepository.getByTypeFlow(LocationType.MOCK_TARGET),
+                locationRepository.getAnchorsWithMocksFlow(),
+                folderRepository.getAllFlow()
+            ) { anchors, mockTargets, grouped, folders ->
+                val duplicates = computeDuplicates(anchors, mockTargets)
+                _uiState.value.copy(
+                    anchors = anchors,
+                    mockTargets = mockTargets,
+                    groupedList = grouped,
+                    folders = folders,
+                    duplicateAnchorMap = duplicates,
+                    isLoading = false
+                )
+            }.collect { newState ->
+                _uiState.update { current ->
+                    newState.copy(
+                        selectedTab = current.selectedTab,
+                        isFilterFavoriteOnly = current.isFilterFavoriteOnly,
+                        selectedFolderId = current.selectedFolderId,
+                        expandedAnchorIds = current.expandedAnchorIds,
+                        searchQuery = current.searchQuery,
+                        searchResults = current.searchResults,
+                        isSearchActive = current.isSearchActive,
+                        locationToDelete = current.locationToDelete
+                    )
+                }
             }
         }
     }
 
+    private fun computeDuplicates(anchors: List<Location>, mocks: List<Location>): Map<Long, Location> {
+        val result = mutableMapOf<Long, Location>()
+        for (mock in mocks) {
+            val matchingAnchor = anchors.firstOrNull { anchor ->
+                geoEngine.distance(mock.coordinate, anchor.coordinate) <= 1.0 ||
+                (Math.abs(mock.latitude - anchor.latitude) < 0.00001 && Math.abs(mock.longitude - anchor.longitude) < 0.00001)
+            }
+            if (matchingAnchor != null && mock.parentAnchorId != matchingAnchor.id) {
+                result[mock.id] = matchingAnchor
+            }
+        }
+        return result
+    }
+
     fun onTabSelected(tab: LocationsTab) {
         _uiState.update { it.copy(selectedTab = tab) }
+    }
+
+    fun onToggleFavoriteFilter() {
+        _uiState.update { it.copy(isFilterFavoriteOnly = !it.isFilterFavoriteOnly) }
+    }
+
+    fun onFolderSelected(folderId: Long?) {
+        _uiState.update { it.copy(selectedFolderId = folderId) }
+    }
+
+    fun onToggleAnchorExpanded(anchorId: Long) {
+        _uiState.update { state ->
+            val updated = if (state.expandedAnchorIds.contains(anchorId)) {
+                state.expandedAnchorIds - anchorId
+            } else {
+                state.expandedAnchorIds + anchorId
+            }
+            state.copy(expandedAnchorIds = updated)
+        }
+    }
+
+    fun onPreviewLocation(target: Location, parentAnchor: Location? = null, onNavigateToMap: () -> Unit) {
+        mapPreviewCoordinator.requestPreview(target, parentAnchor)
+        onNavigateToMap()
+    }
+
+    fun onLinkToAnchor(mockId: Long, anchorId: Long) {
+        viewModelScope.launch {
+            locationRepository.updateParentAnchor(mockId, anchorId)
+            val anchor = _uiState.value.anchors.find { it.id == anchorId }
+            val anchorName = anchor?.name ?: "Anchor"
+            _uiState.update { it.copy(userMessage = "Mock Target berhasil dikaitkan ke $anchorName") }
+        }
+    }
+
+    fun clearUserMessage() {
+        _uiState.update { it.copy(userMessage = null) }
     }
 
     fun onSearchQueryChanged(query: String) {
@@ -105,3 +178,4 @@ class LocationsViewModel @Inject constructor(
         mockLocationManager.start(location)
     }
 }
+

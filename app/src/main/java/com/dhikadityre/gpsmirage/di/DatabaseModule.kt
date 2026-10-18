@@ -17,6 +17,31 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+        override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `default_profiles` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `latitude` REAL NOT NULL,
+                    `longitude` REAL NOT NULL,
+                    `radius_meters` REAL NOT NULL,
+                    `accuracy_meters` REAL NOT NULL,
+                    `altitude_meters` REAL NOT NULL,
+                    `speed_kmh` REAL NOT NULL,
+                    `bearing_degrees` REAL NOT NULL,
+                    `use_device_sensor` INTEGER NOT NULL,
+                    `is_active` INTEGER NOT NULL,
+                    `is_default` INTEGER NOT NULL,
+                    `created_at` INTEGER NOT NULL,
+                    `updated_at` INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): GpsMirageDatabase {
@@ -24,7 +49,11 @@ object DatabaseModule {
             context,
             GpsMirageDatabase::class.java,
             GpsMirageDatabase.DATABASE_NAME
-        ).build()
+        )
+            .addMigrations(MIGRATION_2_3)
+            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade()
+            .build()
     }
 
     @Provides
@@ -35,4 +64,8 @@ object DatabaseModule {
 
     @Provides
     fun provideHistoryDao(db: GpsMirageDatabase): HistoryDao = db.historyDao()
+
+    @Provides
+    fun provideDefaultProfileDao(db: GpsMirageDatabase): com.dhikadityre.gpsmirage.core.database.dao.DefaultProfileDao =
+        db.defaultProfileDao()
 }

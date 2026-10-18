@@ -8,6 +8,11 @@ data class Coordinate(
     val longitude: Double
 )
 
+enum class LocationType {
+    CENTER_ANCHOR,
+    MOCK_TARGET
+}
+
 /**
  * Core location domain model.
  * Used across all features — saved locations, history, generator output, etc.
@@ -17,6 +22,9 @@ data class Location(
     val name: String,
     val latitude: Double,
     val longitude: Double,
+    val type: LocationType = LocationType.MOCK_TARGET,
+    val radiusMeters: Double? = null,
+    val parentAnchorId: Long? = null,
     val accuracy: Float = 5f,
     val altitude: Double = 0.0,
     val speed: Float = 0f,
@@ -35,3 +43,12 @@ data class Location(
     val isNew: Boolean
         get() = id == 0L
 }
+
+/**
+ * Composite model representing a Center Anchor and its associated child Mock targets.
+ */
+data class AnchorWithMocks(
+    val anchor: Location,
+    val mocks: List<Location>
+)
+

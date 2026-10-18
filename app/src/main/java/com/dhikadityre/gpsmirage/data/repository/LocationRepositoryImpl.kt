@@ -2,9 +2,12 @@ package com.dhikadityre.gpsmirage.data.repository
 
 import com.dhikadityre.gpsmirage.core.database.dao.LocationDao
 import com.dhikadityre.gpsmirage.core.database.entity.LocationEntity
+import com.dhikadityre.gpsmirage.core.model.AnchorWithMocks
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.LocationType
 import com.dhikadityre.gpsmirage.domain.location.LocationRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -21,11 +24,34 @@ class LocationRepositoryImpl @Inject constructor(
     override fun getByFolderFlow(folderId: Long): Flow<List<Location>> =
         locationDao.getByFolderFlow(folderId).map { entities -> entities.map { it.toDomain() } }
 
+    override fun getByTypeFlow(type: LocationType): Flow<List<Location>> =
+        locationDao.getByTypeFlow(type.name).map { entities -> entities.map { it.toDomain() } }
+
+    override fun getChildrenOfAnchorFlow(anchorId: Long): Flow<List<Location>> =
+        locationDao.getChildrenOfAnchorFlow(anchorId).map { entities -> entities.map { it.toDomain() } }
+
+    override fun getAnchorsWithMocksFlow(): Flow<List<AnchorWithMocks>> =
+        combine(
+            getByTypeFlow(LocationType.CENTER_ANCHOR),
+            getByTypeFlow(LocationType.MOCK_TARGET)
+        ) { anchors, mocks ->
+            anchors.map { anchor ->
+                val children = mocks.filter { it.parentAnchorId == anchor.id }
+                AnchorWithMocks(anchor = anchor, mocks = children)
+            }
+        }
+
     override suspend fun getAll(): List<Location> =
         locationDao.getAll().map { it.toDomain() }
 
     override suspend fun getById(id: Long): Location? =
         locationDao.getById(id)?.toDomain()
+
+    override suspend fun getByType(type: LocationType): List<Location> =
+        locationDao.getByType(type.name).map { it.toDomain() }
+
+    override suspend fun getChildrenOfAnchor(anchorId: Long): List<Location> =
+        locationDao.getChildrenOfAnchor(anchorId).map { it.toDomain() }
 
     override suspend fun getFavorites(): List<Location> =
         locationDao.getFavorites().map { it.toDomain() }
@@ -54,9 +80,13 @@ class LocationRepositoryImpl @Inject constructor(
     override suspend fun updateFolder(id: Long, folderId: Long?) =
         locationDao.updateFolder(id, folderId)
 
+    override suspend fun updateParentAnchor(id: Long, parentAnchorId: Long?) =
+        locationDao.updateParentAnchor(id, parentAnchorId)
+
     override suspend fun delete(id: Long) =
         locationDao.deleteById(id)
 
     override suspend fun isDuplicate(name: String, latitude: Double, longitude: Double): Boolean =
         locationDao.countDuplicates(latitude, longitude, name) > 0
 }
+

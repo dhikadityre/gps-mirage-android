@@ -63,9 +63,25 @@ interface LocationDao {
     @Delete
     suspend fun delete(location: LocationEntity)
 
+    @Query("SELECT * FROM locations WHERE location_type = :type ORDER BY updated_at DESC")
+    fun getByTypeFlow(type: String): Flow<List<LocationEntity>>
+
+    @Query("SELECT * FROM locations WHERE location_type = :type ORDER BY updated_at DESC")
+    suspend fun getByType(type: String): List<LocationEntity>
+
+    @Query("SELECT * FROM locations WHERE parent_anchor_id = :anchorId ORDER BY updated_at DESC")
+    fun getChildrenOfAnchorFlow(anchorId: Long): Flow<List<LocationEntity>>
+
+    @Query("SELECT * FROM locations WHERE parent_anchor_id = :anchorId ORDER BY updated_at DESC")
+    suspend fun getChildrenOfAnchor(anchorId: Long): List<LocationEntity>
+
+    @Query("UPDATE locations SET parent_anchor_id = :parentAnchorId, updated_at = :updatedAt WHERE id = :id")
+    suspend fun updateParentAnchor(id: Long, parentAnchorId: Long?, updatedAt: Long = System.currentTimeMillis())
+
     @Query("SELECT COUNT(*) FROM locations WHERE latitude = :lat AND longitude = :lng AND name = :name")
     suspend fun countDuplicates(lat: Double, lng: Double, name: String): Int
 
     @Query("SELECT COUNT(*) FROM locations")
     suspend fun count(): Int
 }
+

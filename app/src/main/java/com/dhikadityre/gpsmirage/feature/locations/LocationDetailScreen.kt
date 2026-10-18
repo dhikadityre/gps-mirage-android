@@ -19,7 +19,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.LocationType
 import com.dhikadityre.gpsmirage.domain.location.LocationRepository
+import com.dhikadityre.gpsmirage.domain.location.MapPreviewCoordinator
 import com.dhikadityre.gpsmirage.domain.location.MockLocationManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +33,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LocationDetailViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
-    private val mockLocationManager: MockLocationManager
+    private val mockLocationManager: MockLocationManager,
+    private val mapPreviewCoordinator: MapPreviewCoordinator
 ) : ViewModel() {
 
     private val _location = MutableStateFlow<Location?>(null)
@@ -59,6 +62,15 @@ class LocationDetailViewModel @Inject constructor(
         }
     }
 
+    fun previewOnMap(onNavigateToMap: () -> Unit) {
+        val current = _location.value ?: return
+        viewModelScope.launch {
+            val parent = current.parentAnchorId?.let { pid -> locationRepository.getById(pid) }
+            mapPreviewCoordinator.requestPreview(current, parent)
+            onNavigateToMap()
+        }
+    }
+
     fun startMock() {
         val current = _location.value ?: return
         mockLocationManager.start(current)
@@ -71,6 +83,7 @@ fun LocationDetailScreen(
     locationId: Long,
     onEdit: (Long) -> Unit,
     onBack: () -> Unit,
+    onNavigateToMap: () -> Unit = onBack,
     viewModel: LocationDetailViewModel = hiltViewModel()
 ) {
     LaunchedEffect(locationId) {
@@ -121,12 +134,25 @@ fun LocationDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = loc.name,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                        color = if (loc.type == LocationType.CENTER_ANCHOR) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Text(
+                            text = if (loc.type == LocationType.CENTER_ANCHOR) "Center Anchor (Radius Acuan)" else "Mock Target",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (loc.type == LocationType.CENTER_ANCHOR) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = loc.name,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 IconButton(onClick = { viewModel.toggleFavorite() }) {
                     Icon(
                         if (loc.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
@@ -148,6 +174,10 @@ fun LocationDetailScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontFamily = FontFamily.Monospace
                     )
+                    if (loc.type == LocationType.CENTER_ANCHOR) {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Radius Geofence: ${(loc.radiusMeters ?: 500.0).toInt()} meter", style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
             }
 
@@ -171,16 +201,43 @@ fun LocationDetailScreen(
 
             Spacer(Modifier.weight(1f))
 
-            Button(
-                onClick = { viewModel.startMock() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Start Mock Location", fontWeight = FontWeight.Bold)
+            if (loc.type == LocationType.CENTER_ANCHOR) {
+                Button(
+                    onClick = { viewModel.previewOnMap(onNavigateToMap) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Preview Radius on Map", fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.previewOnMap(onNavigateToMap) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Preview Map", fontWeight = FontWeight.SemiBold)
+                    }
+                    Button(
+                        onClick = { viewModel.startMock() },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                    ) {
+                        Text("Start Mock", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
+
         }
     }
 

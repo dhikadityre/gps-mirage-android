@@ -41,4 +41,10 @@ abstract class RepositoryModule {
     abstract fun bindSettingsRepository(
         impl: SettingsRepositoryImpl
     ): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDefaultProfileRepository(
+        impl: com.dhikadityre.gpsmirage.data.repository.DefaultProfileRepositoryImpl
+    ): com.dhikadityre.gpsmirage.domain.preset.DefaultProfileRepository
 }

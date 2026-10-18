@@ -9,6 +9,14 @@ enum class MapSelectionMode {
     TAP_TO_SELECT
 }
 
+data class MapPreviewSnapshot(
+    val previousRadiusConfig: RadiusConfig,
+    val previousCoordinate: Coordinate?,
+    val previousLocationName: String,
+    val previousResolvedAddress: String?,
+    val previousCenterAnchor: Coordinate?
+)
+
 data class MapUiState(
     val selectedCoordinate: Coordinate? = RadiusConfig.MAYAPADA_TOWER,
     val selectedLocationName: String = "",
@@ -26,6 +34,8 @@ data class MapUiState(
     val selectionMode: MapSelectionMode = MapSelectionMode.CENTER_PIN,
     val isPositionLocked: Boolean = false,
     val isRewindEnabled: Boolean = false,
+    val previewSnapshot: MapPreviewSnapshot? = null,
+    val previewingLocationName: String? = null,
     val error: String? = null,
     val event: MapEvent? = null
 )

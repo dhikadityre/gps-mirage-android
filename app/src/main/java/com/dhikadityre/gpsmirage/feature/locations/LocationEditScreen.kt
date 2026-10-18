@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -15,22 +16,45 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dhikadityre.gpsmirage.core.geo.UnitConverter
+import com.dhikadityre.gpsmirage.core.model.DefaultValueProfile
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.LocationType
 import com.dhikadityre.gpsmirage.domain.location.LocationRepository
+import com.dhikadityre.gpsmirage.domain.preset.DefaultProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class LocationEditViewModel @Inject constructor(
-    private val locationRepository: LocationRepository
+    private val locationRepository: LocationRepository,
+    private val defaultProfileRepository: DefaultProfileRepository
 ) : ViewModel() {
+
+    val activeProfile: StateFlow<DefaultValueProfile?> = defaultProfileRepository.activeProfile
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _existingLocation = MutableStateFlow<Location?>(null)
     val existingLocation: StateFlow<Location?> = _existingLocation.asStateFlow()
+
+    private val _availableAnchors = MutableStateFlow<List<Location>>(emptyList())
+    val availableAnchors: StateFlow<List<Location>> = _availableAnchors.asStateFlow()
+
+    init {
+        loadAnchors()
+    }
+
+    private fun loadAnchors() {
+        viewModelScope.launch {
+            _availableAnchors.value = locationRepository.getByType(LocationType.CENTER_ANCHOR)
+        }
+    }
 
     fun load(id: Long) {
         if (id == 0L) return
@@ -44,6 +68,9 @@ class LocationEditViewModel @Inject constructor(
         name: String,
         latitude: Double,
         longitude: Double,
+        type: LocationType,
+        radiusMeters: Double?,
+        parentAnchorId: Long?,
         accuracy: Float,
         altitude: Double,
         speed: Float,
@@ -56,6 +83,9 @@ class LocationEditViewModel @Inject constructor(
                 name = name,
                 latitude = latitude,
                 longitude = longitude,
+                type = type,
+                radiusMeters = if (type == LocationType.CENTER_ANCHOR) radiusMeters ?: 500.0 else null,
+                parentAnchorId = if (type == LocationType.MOCK_TARGET) parentAnchorId else null,
                 accuracy = accuracy,
                 altitude = altitude,
                 speed = speed,
@@ -88,22 +118,47 @@ fun LocationEditScreen(
     }
 
     val existing by viewModel.existingLocation.collectAsState()
+    val availableAnchors by viewModel.availableAnchors.collectAsState()
+    val activeProfile by viewModel.activeProfile.collectAsState()
 
     var name by remember { mutableStateOf("") }
     var latInput by remember { mutableStateOf(if (initialLat != 0.0) initialLat.toString() else "") }
     var lngInput by remember { mutableStateOf(if (initialLng != 0.0) initialLng.toString() else "") }
+    var locationType by remember { mutableStateOf(LocationType.MOCK_TARGET) }
+    var radiusInput by remember { mutableStateOf("500") }
+    var selectedParentAnchorId by remember { mutableStateOf<Long?>(null) }
+    var isAnchorDropdownExpanded by remember { mutableStateOf(false) }
+
     var accuracyInput by remember { mutableStateOf("5") }
     var altitudeInput by remember { mutableStateOf("0") }
     var speedInput by remember { mutableStateOf("0") }
     var bearingInput by remember { mutableStateOf("0") }
     var showAdvanced by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var hasPreFilledFromPreset by remember { mutableStateOf(false) }
+
+    LaunchedEffect(activeProfile) {
+        val preset = activeProfile
+        if (locationId == 0L && existing == null && preset != null && !hasPreFilledFromPreset) {
+            hasPreFilledFromPreset = true
+            if (latInput.isBlank()) latInput = preset.latitude.toString()
+            if (lngInput.isBlank()) lngInput = preset.longitude.toString()
+            radiusInput = preset.radiusMeters.toInt().toString()
+            accuracyInput = UnitConverter.formatTwoDecimals(preset.accuracyMeters)
+            altitudeInput = UnitConverter.formatTwoDecimals(preset.altitudeMeters)
+            speedInput = preset.speedKmh.toInt().toString()
+            bearingInput = UnitConverter.formatTwoDecimals(preset.bearingDegrees)
+        }
+    }
 
     LaunchedEffect(existing) {
         existing?.let {
             name = it.name
             latInput = it.latitude.toString()
             lngInput = it.longitude.toString()
+            locationType = it.type
+            radiusInput = (it.radiusMeters ?: 500.0).toInt().toString()
+            selectedParentAnchorId = it.parentAnchorId
             accuracyInput = it.accuracy.toString()
             altitudeInput = it.altitude.toString()
             speedInput = it.speed.toString()
@@ -137,11 +192,15 @@ fun LocationEditScreen(
                                 error = "Longitude must be between -180 and 180"
                                 return@IconButton
                             }
+                            val rad = radiusInput.toDoubleOrNull() ?: 500.0
                             viewModel.save(
                                 id = locationId,
                                 name = name,
                                 latitude = lat,
                                 longitude = lng,
+                                type = locationType,
+                                radiusMeters = if (locationType == LocationType.CENTER_ANCHOR) rad else null,
+                                parentAnchorId = if (locationType == LocationType.MOCK_TARGET) selectedParentAnchorId else null,
                                 accuracy = accuracyInput.toFloatOrNull() ?: 5f,
                                 altitude = altitudeInput.toDoubleOrNull() ?: 0.0,
                                 speed = speedInput.toFloatOrNull() ?: 0f,
@@ -164,6 +223,47 @@ fun LocationEditScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text("Location Category", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = locationType == LocationType.MOCK_TARGET,
+                    onClick = { locationType = LocationType.MOCK_TARGET },
+                    label = { Text("Mock Target") }
+                )
+                FilterChip(
+                    selected = locationType == LocationType.CENTER_ANCHOR,
+                    onClick = { locationType = LocationType.CENTER_ANCHOR },
+                    label = { Text("Center Anchor (Radius)") }
+                )
+            }
+
+            activeProfile?.let { preset ->
+                AssistChip(
+                    onClick = {
+                        latInput = preset.latitude.toString()
+                        lngInput = preset.longitude.toString()
+                        radiusInput = preset.radiusMeters.toInt().toString()
+                        accuracyInput = UnitConverter.formatTwoDecimals(preset.accuracyMeters)
+                        altitudeInput = UnitConverter.formatTwoDecimals(preset.altitudeMeters)
+                        speedInput = preset.speedKmh.toInt().toString()
+                        bearingInput = UnitConverter.formatTwoDecimals(preset.bearingDegrees)
+                    },
+                    label = { Text("Terapkan dari Preset: ${preset.name}") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Tune,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+            }
+
             OutlinedTextField(
                 value = name,
                 onValueChange = {
@@ -195,6 +295,59 @@ fun LocationEditScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (locationType == LocationType.CENTER_ANCHOR) {
+                OutlinedTextField(
+                    value = radiusInput,
+                    onValueChange = { radiusInput = it },
+                    label = { Text("Radius Limit (Meters)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                // If MOCK_TARGET, allow selecting parent anchor if any anchors exist
+                if (availableAnchors.isNotEmpty()) {
+                    val selectedAnchorName = availableAnchors.find { it.id == selectedParentAnchorId }?.name
+                        ?: "None (Standalone Mock)"
+
+                    ExposedDropdownMenuBox(
+                        expanded = isAnchorDropdownExpanded,
+                        onExpandedChange = { isAnchorDropdownExpanded = !isAnchorDropdownExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedAnchorName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Parent Center Anchor (Optional)") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isAnchorDropdownExpanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = isAnchorDropdownExpanded,
+                            onDismissRequest = { isAnchorDropdownExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("None (Standalone Mock)") },
+                                onClick = {
+                                    selectedParentAnchorId = null
+                                    isAnchorDropdownExpanded = false
+                                }
+                            )
+                            availableAnchors.forEach { anchor ->
+                                DropdownMenuItem(
+                                    text = { Text("${anchor.name} (${anchor.radiusMeters?.toInt() ?: 500}m)") },
+                                    onClick = {
+                                        selectedParentAnchorId = anchor.id
+                                        isAnchorDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             if (error != null) {
                 Text(text = error!!, color = MaterialTheme.colorScheme.error)

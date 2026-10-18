@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.LocationType
 
 @Entity(
     tableName = "locations",
@@ -15,9 +16,18 @@ import com.dhikadityre.gpsmirage.core.model.Location
             parentColumns = ["id"],
             childColumns = ["folder_id"],
             onDelete = ForeignKey.SET_NULL
+        ),
+        ForeignKey(
+            entity = LocationEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["parent_anchor_id"],
+            onDelete = ForeignKey.SET_NULL
         )
     ],
-    indices = [Index("folder_id")]
+    indices = [
+        Index("folder_id"),
+        Index("parent_anchor_id")
+    ]
 )
 data class LocationEntity(
     @PrimaryKey(autoGenerate = true)
@@ -25,6 +35,12 @@ data class LocationEntity(
     val name: String,
     val latitude: Double,
     val longitude: Double,
+    @ColumnInfo(name = "location_type")
+    val locationType: String = "MOCK_TARGET",
+    @ColumnInfo(name = "radius_meters")
+    val radiusMeters: Double? = null,
+    @ColumnInfo(name = "parent_anchor_id")
+    val parentAnchorId: Long? = null,
     val accuracy: Float = 5f,
     val altitude: Double = 0.0,
     val speed: Float = 0f,
@@ -43,6 +59,13 @@ data class LocationEntity(
         name = name,
         latitude = latitude,
         longitude = longitude,
+        type = try {
+            LocationType.valueOf(locationType)
+        } catch (e: Exception) {
+            LocationType.MOCK_TARGET
+        },
+        radiusMeters = radiusMeters,
+        parentAnchorId = parentAnchorId,
         accuracy = accuracy,
         altitude = altitude,
         speed = speed,
@@ -59,6 +82,9 @@ data class LocationEntity(
             name = location.name,
             latitude = location.latitude,
             longitude = location.longitude,
+            locationType = location.type.name,
+            radiusMeters = location.radiusMeters,
+            parentAnchorId = location.parentAnchorId,
             accuracy = location.accuracy,
             altitude = location.altitude,
             speed = location.speed,
@@ -70,3 +96,4 @@ data class LocationEntity(
         )
     }
 }
+
