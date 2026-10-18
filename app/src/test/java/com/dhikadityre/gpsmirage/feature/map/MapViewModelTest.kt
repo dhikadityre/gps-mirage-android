@@ -50,7 +50,11 @@ class MapViewModelTest {
         override suspend fun getByFolder(folderId: Long): List<Location> = emptyList()
         override suspend fun getRecent(limit: Int): List<Location> = emptyList()
         override suspend fun search(query: String): List<Location> = emptyList()
-        override suspend fun save(location: Location): Long = 1L
+        var lastSavedLocation: Location? = null
+        override suspend fun save(location: Location): Long {
+            lastSavedLocation = location
+            return 1L
+        }
         override suspend fun saveAll(locations: List<Location>): List<Long> = emptyList()
         override suspend fun update(location: Location) {}
         override suspend fun updateFavorite(id: Long, isFavorite: Boolean) {}
@@ -663,6 +667,38 @@ class MapViewModelTest {
         advanceUntilIdle()
 
         assertEquals(initialCoord, viewModel.uiState.value.selectedCoordinate)
+    }
+
+    @Test
+    fun `onSaveLocation with custom name saves location and triggers snackbar`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        val coord = Coordinate(-6.2140, 106.8200)
+        viewModel.onMapCenterMoved(coord.latitude, coord.longitude)
+        advanceUntilIdle()
+
+        viewModel.onSaveLocation("Kantor Sudirman")
+        advanceUntilIdle()
+
+        assertEquals("Kantor Sudirman", fakeLocationRepository.lastSavedLocation?.name)
+        assertEquals(coord.latitude, fakeLocationRepository.lastSavedLocation?.latitude ?: 0.0, 0.000001)
+        assertEquals(coord.longitude, fakeLocationRepository.lastSavedLocation?.longitude ?: 0.0, 0.000001)
+        assertTrue(viewModel.uiState.value.event is MapEvent.ShowSnackbar)
+        assertEquals("Location saved: Kantor Sudirman", (viewModel.uiState.value.event as MapEvent.ShowSnackbar).message)
+    }
+
+    @Test
+    fun `onSaveLocation with blank name falls back to Unnamed Location`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        val coord = Coordinate(-6.2140, 106.8200)
+        viewModel.onMapCenterMoved(coord.latitude, coord.longitude)
+        advanceUntilIdle()
+
+        viewModel.onSaveLocation("   ")
+        advanceUntilIdle()
+
+        assertEquals("Unnamed Location", fakeLocationRepository.lastSavedLocation?.name)
+        assertTrue(viewModel.uiState.value.event is MapEvent.ShowSnackbar)
+        assertEquals("Location saved: Unnamed Location", (viewModel.uiState.value.event as MapEvent.ShowSnackbar).message)
     }
 }
 

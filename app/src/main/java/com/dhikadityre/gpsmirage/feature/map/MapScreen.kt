@@ -30,11 +30,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
@@ -42,6 +52,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -617,6 +628,7 @@ private fun SelectedCoordinateCard(
     modifier: Modifier = Modifier
 ) {
     var nameInput by remember(coordinate) { mutableStateOf(locationName) }
+    var isExpanded by remember(coordinate) { mutableStateOf(false) }
 
     LaunchedEffect(resolvedShortAddress) {
         if (!resolvedShortAddress.isNullOrBlank() && (nameInput.isBlank() || nameInput == "Unnamed Location")) {
@@ -627,7 +639,11 @@ private fun SelectedCoordinateCard(
     val configuration = LocalConfiguration.current
     val isCompactScreen = configuration.screenHeightDp < 640
     val maxCardHeight = if (isCompactScreen) {
-        (configuration.screenHeightDp * 0.58f).coerceIn(240f, 340f).dp
+        if (isExpanded) {
+            (configuration.screenHeightDp * 0.60f).coerceIn(240f, 380f).dp
+        } else {
+            (configuration.screenHeightDp * 0.38f).coerceIn(160f, 220f).dp
+        }
     } else {
         (configuration.screenHeightDp * 0.50f).coerceIn(320f, 480f).dp
     }
@@ -635,7 +651,8 @@ private fun SelectedCoordinateCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = maxCardHeight),
+            .heightIn(max = maxCardHeight)
+            .animateContentSize(),
         elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -646,69 +663,86 @@ private fun SelectedCoordinateCard(
                 .padding(if (isCompactScreen) 12.dp else 16.dp),
             verticalArrangement = Arrangement.spacedBy(if (isCompactScreen) 8.dp else 12.dp)
         ) {
-            // Location Preview Card (Street Name & Lat/Lng)
+            // Location Preview Card (Street Name, Lat/Lng, and Expand/Edit Toggle)
             Surface(
                 shape = RoundedCornerShape(10.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                        .padding(horizontal = 12.dp, vertical = if (isCompactScreen) 8.dp else 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            if (isResolvingAddress) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(12.dp),
+                                        strokeWidth = 1.5.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "Mendeteksi nama jalan...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                val displayName = when {
+                                    nameInput.isNotBlank() && nameInput != "Unnamed Location" -> nameInput
+                                    !resolvedShortAddress.isNullOrBlank() -> resolvedShortAddress
+                                    else -> "Nama jalan tidak terdeteksi"
+                                }
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "%.6f,  %.6f".format(coordinate.latitude, coordinate.longitude),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                            modifier = Modifier.padding(start = 26.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { isExpanded = !isExpanded },
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.Edit,
+                            contentDescription = if (isExpanded) "Tutup edit nama" else "Ubah nama lokasi",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
-                        if (isResolvingAddress) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(12.dp),
-                                    strokeWidth = 1.5.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = "Mendeteksi nama jalan...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        } else if (!resolvedShortAddress.isNullOrBlank()) {
-                            Text(
-                                text = resolvedShortAddress,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        } else {
-                            Text(
-                                text = "Nama jalan tidak terdeteksi",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
-
-                    Text(
-                        text = "%.6f,  %.6f".format(coordinate.latitude, coordinate.longitude),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                        modifier = Modifier.padding(start = 26.dp)
-                    )
                 }
             }
 
@@ -745,14 +779,22 @@ private fun SelectedCoordinateCard(
                 }
             }
 
-            OutlinedTextField(
-                value = nameInput,
-                onValueChange = { nameInput = it },
-                label = { Text("Location name") },
-                placeholder = { Text("Nama lokasi") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                OutlinedTextField(
+                    value = nameInput,
+                    onValueChange = { nameInput = it },
+                    label = { Text("Location name") },
+                    placeholder = { Text("Nama lokasi") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { isExpanded = false }),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // Geofence Radius Info & Warning Badge
             if (radiusConfig.isEnabled && distanceToAnchorMeters != null) {
@@ -822,7 +864,14 @@ private fun SelectedCoordinateCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ElevatedButton(
-                    onClick = { onSave(nameInput.ifBlank { "Unnamed Location" }) },
+                    onClick = {
+                        val finalName = when {
+                            nameInput.isNotBlank() -> nameInput
+                            !resolvedShortAddress.isNullOrBlank() -> resolvedShortAddress
+                            else -> "Unnamed Location"
+                        }
+                        onSave(finalName)
+                    },
                     enabled = !isLoading,
                     modifier = Modifier.weight(1f)
                 ) {
