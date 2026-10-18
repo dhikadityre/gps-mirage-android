@@ -17,7 +17,7 @@ import com.dhikadityre.gpsmirage.feature.locations.LocationsScreen
 import com.dhikadityre.gpsmirage.feature.map.MapScreen
 import com.dhikadityre.gpsmirage.feature.more.MoreScreen
 import com.dhikadityre.gpsmirage.feature.settings.MockSetupGuideScreen
-import com.dhikadityre.gpsmirage.feature.settings.SettingsScreen
+import com.dhikadityre.gpsmirage.feature.more.AboutScreen
 import com.dhikadityre.gpsmirage.feature.tools.AlarmSchedulerScreen
 import com.dhikadityre.gpsmirage.feature.tools.AppearanceScreen
 import com.dhikadityre.gpsmirage.feature.tools.DefaultValuesScreen
@@ -113,7 +113,6 @@ fun GpsMirageNavHost(
                 onNavigateToDefaultValues = { navController.navigate(Screen.DefaultValues.route) },
                 onNavigateToGenerator = { navController.navigate(Screen.Generator.route) },
                 onNavigateToAlarmScheduler = { navController.navigate(Screen.AlarmScheduler.route) },
-                onNavigateToAppearance = { navController.navigate(Screen.AppearanceSettings.route) },
                 onNavigateToImport = { navController.navigate(Screen.Import.route) },
                 onNavigateToExport = { navController.navigate(Screen.Export.route) }
             )
@@ -152,17 +151,8 @@ fun GpsMirageNavHost(
 
         composable(Screen.More.route) {
             MoreScreen(
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                onNavigateToSetupGuide = { navController.navigate(Screen.MockSetupGuide.route) },
+                onNavigateToAppearance = { navController.navigate(Screen.AppearanceSettings.route) },
                 onNavigateToAbout = { navController.navigate(Screen.About.route) }
-            )
-        }
-
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onNavigateToGeofenceRadius = { navController.navigate(Screen.GeofenceRadius.route) },
-                onNavigateToSetupGuide = { navController.navigate(Screen.MockSetupGuide.route) }
             )
         }
 
@@ -171,11 +161,7 @@ fun GpsMirageNavHost(
         }
 
         composable(Screen.About.route) {
-            MoreScreen(
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                onNavigateToSetupGuide = { navController.navigate(Screen.MockSetupGuide.route) },
-                onNavigateToAbout = {}
-            )
+            AboutScreen(onBack = { navController.popBackStack() })
         }
     }
 }

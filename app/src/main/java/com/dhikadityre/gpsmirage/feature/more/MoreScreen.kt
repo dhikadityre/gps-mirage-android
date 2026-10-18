@@ -2,47 +2,55 @@ package com.dhikadityre.gpsmirage.feature.more
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
-    onNavigateToSettings: () -> Unit,
-    onNavigateToSetupGuide: () -> Unit,
+    onNavigateToAppearance: () -> Unit,
     onNavigateToAbout: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("More") })
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "More",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            )
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            MoreMenuItem(
-                title = "Settings",
-                icon = Icons.Default.Settings,
-                onClick = onNavigateToSettings
+            MoreMenuCard(
+                title = "Tampilan & Tema",
+                subtitle = "Pilihan layer peta (Google Maps/OSM), notifikasi status bar, bahasa, dan dark/light mode.",
+                icon = Icons.Default.Palette,
+                onClick = onNavigateToAppearance
             )
-            HorizontalDivider()
-            MoreMenuItem(
-                title = "Mock Location Setup Guide",
-                icon = Icons.Default.HelpOutline,
-                onClick = onNavigateToSetupGuide
-            )
-            HorizontalDivider()
-            MoreMenuItem(
-                title = "About",
+
+            MoreMenuCard(
+                title = "Tentang Aplikasi",
+                subtitle = "Nomor versi aplikasi (Hero display), profil developer Dhikadityre, dan tujuan sistem.",
                 icon = Icons.Default.Info,
                 onClick = onNavigateToAbout
             )
@@ -51,20 +59,63 @@ fun MoreScreen(
 }
 
 @Composable
-private fun MoreMenuItem(
+private fun MoreMenuCard(
     title: String,
+    subtitle: String,
     icon: ImageVector,
     onClick: () -> Unit
 ) {
-    ListItem(
-        headlineContent = { Text(title) },
-        leadingContent = {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             Icon(
-                imageVector = icon,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
             )
-        },
-        modifier = Modifier.clickable(onClick = onClick)
-    )
+        }
+    }
 }

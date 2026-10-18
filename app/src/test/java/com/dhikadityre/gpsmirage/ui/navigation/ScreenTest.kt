@@ -44,9 +44,10 @@ class ScreenTest {
     }
 
     @Test
-    fun `geofence radius and mock setup guide have expected routes`() {
+    fun `geofence radius and mock setup guide and about have expected routes`() {
         assertEquals("geofence_radius", Screen.GeofenceRadius.route)
         assertEquals("mock_setup_guide", Screen.MockSetupGuide.route)
-        assertEquals("settings", Screen.Settings.route)
+        assertEquals("about", Screen.About.route)
+        assertEquals("appearance_settings", Screen.AppearanceSettings.route)
     }
 }

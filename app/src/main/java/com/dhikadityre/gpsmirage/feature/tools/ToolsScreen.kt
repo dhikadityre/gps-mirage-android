@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.Adjust
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Tune
@@ -33,7 +32,6 @@ fun ToolsScreen(
     onNavigateToDefaultValues: () -> Unit,
     onNavigateToGenerator: () -> Unit,
     onNavigateToAlarmScheduler: () -> Unit,
-    onNavigateToAppearance: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToExport: () -> Unit,
     viewModel: ToolsViewModel = hiltViewModel(),
@@ -224,21 +222,6 @@ fun ToolsScreen(
                 description = "Pengingat terjadwal jam dan hari tertentu untuk membuka dan menjalankan GPS Mirage.",
                 icon = Icons.Default.Alarm,
                 onClick = onNavigateToAlarmScheduler
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            // SECTION 3: APPEARANCE
-            SectionHeader(
-                title = "APPEARANCE",
-                description = "Kustomisasi gaya visual peta, status bar, bahasa, dan mode tema aplikasi."
-            )
-
-            ToolItemCard(
-                title = "Tampilan & Tema",
-                description = "Pilihan layer peta (Google Maps/OSM), notifikasi status bar, bahasa, dan dark/light mode.",
-                icon = Icons.Default.Palette,
-                onClick = onNavigateToAppearance
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))

@@ -4,16 +4,26 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dhikadityre.dev.tools.BuildConfig
 import com.dhikadityre.gpsmirage.core.model.AppearanceConfig
 import com.dhikadityre.gpsmirage.domain.settings.SettingsRepository
 import com.dhikadityre.gpsmirage.ui.navigation.GpsMirageBottomNav
@@ -23,6 +33,7 @@ import com.dhikadityre.gpsmirage.ui.navigation.bottomNavItems
 import com.dhikadityre.gpsmirage.ui.theme.GpsMirageTheme
 import com.dhikadityre.gpsmirage.ui.theme.ProvideAppLanguage
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -39,11 +50,95 @@ class MainActivity : ComponentActivity() {
             val appearanceConfig by settingsRepository.appearanceConfig
                 .collectAsStateWithLifecycle(initialValue = AppearanceConfig())
 
+            var isSplashFinished by remember { mutableStateOf(false) }
+
+            LaunchedEffect(Unit) {
+                delay(1500)
+                isSplashFinished = true
+            }
+
             ProvideAppLanguage(language = appearanceConfig.language) {
                 GpsMirageTheme(themeMode = appearanceConfig.themeMode) {
-                    GpsMirageMainScreen()
+                    Crossfade(
+                        targetState = isSplashFinished,
+                        animationSpec = tween(400),
+                        label = "splash_transition"
+                    ) { finished ->
+                        if (finished) {
+                            GpsMirageMainScreen()
+                        } else {
+                            SplashScreenView(versionName = BuildConfig.VERSION_NAME)
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SplashScreenView(versionName: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0F172A)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(80.dp),
+                shadowElevation = 8.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(44.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Text(
+                text = "GPS Mirage",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                letterSpacing = 1.sp
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = "Precision Mock Geolocation",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF94A3B8)
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 44.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "v$versionName",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF94A3B8),
+                letterSpacing = 0.5.sp
+            )
         }
     }
 }

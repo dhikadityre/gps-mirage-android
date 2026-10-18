@@ -35,8 +35,7 @@ sealed class Screen(val route: String) {
     object AlarmScheduler : Screen("alarm_scheduler")
     object AppearanceSettings : Screen("appearance_settings")
 
-    // More sub-screens
-    object Settings : Screen("settings")
+    // Shared & More sub-screens
     object MockSetupGuide : Screen("mock_setup_guide")
     object About : Screen("about")
 }
