@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -84,7 +85,14 @@ class LocationsViewModelTest {
         override suspend fun updateParentAnchor(id: Long, parentAnchorId: Long?) {
             lastUpdatedParentAnchorId = id to parentAnchorId
         }
+        var lastDeletedMultipleIds: List<Long>? = null
+        var lastDeletedMultipleLinked: Boolean = false
+
         override suspend fun delete(id: Long) {}
+        override suspend fun deleteMultiple(ids: List<Long>, deleteLinkedChildren: Boolean) {
+            lastDeletedMultipleIds = ids
+            lastDeletedMultipleLinked = deleteLinkedChildren
+        }
         override suspend fun isDuplicate(name: String, latitude: Double, longitude: Double): Boolean = false
     }
 
@@ -326,6 +334,95 @@ class LocationsViewModelTest {
 
         assertTrue(viewModel.uiState.value.expandedAnchorIds.contains(10L))
         assertEquals("Berhasil membuat 3 sub-mock untuk Main Base", viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun `enterSelectionMode and toggleSelectLocation update selectedLocationIds`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isSelectionMode)
+        assertTrue(viewModel.uiState.value.selectedLocationIds.isEmpty())
+
+        viewModel.enterSelectionMode(initialSelectedId = 101L)
+        assertTrue(viewModel.uiState.value.isSelectionMode)
+        assertEquals(setOf(101L), viewModel.uiState.value.selectedLocationIds)
+
+        viewModel.toggleSelectLocation(102L)
+        assertEquals(setOf(101L, 102L), viewModel.uiState.value.selectedLocationIds)
+
+        viewModel.toggleSelectLocation(101L)
+        assertEquals(setOf(102L), viewModel.uiState.value.selectedLocationIds)
+
+        viewModel.exitSelectionMode()
+        assertFalse(viewModel.uiState.value.isSelectionMode)
+        assertTrue(viewModel.uiState.value.selectedLocationIds.isEmpty())
+    }
+
+    @Test
+    fun `toggleSelectLocation hierarchical selects anchor and child sub-mocks`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.enterSelectionMode()
+        val anchorId = 1L
+        val childIds = listOf(11L, 12L, 13L)
+
+        // Select anchor and children
+        viewModel.toggleSelectLocation(anchorId, isAnchor = true, childIds = childIds)
+        assertEquals(setOf(1L, 11L, 12L, 13L), viewModel.uiState.value.selectedLocationIds)
+
+        // Deselect anchor and children
+        viewModel.toggleSelectLocation(anchorId, isAnchor = true, childIds = childIds)
+        assertTrue(viewModel.uiState.value.selectedLocationIds.isEmpty())
+
+        // Select individual sub-mock
+        viewModel.toggleSelectLocation(12L)
+        assertEquals(setOf(12L), viewModel.uiState.value.selectedLocationIds)
+    }
+
+    @Test
+    fun `toggleSelectAll selects all visible items and deselects if all selected`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.enterSelectionMode()
+        val visibleIds = listOf(10L, 20L)
+        val groupedChildMap = mapOf(10L to listOf(101L, 102L))
+
+        // Select all
+        viewModel.toggleSelectAll(visibleIds, groupedChildMap)
+        assertEquals(setOf(10L, 20L, 101L, 102L), viewModel.uiState.value.selectedLocationIds)
+
+        // Toggle again to deselect all
+        viewModel.toggleSelectAll(visibleIds, groupedChildMap)
+        assertTrue(viewModel.uiState.value.selectedLocationIds.isEmpty())
+    }
+
+    @Test
+    fun `bulk delete flow confirms and deletes multiple items with linked option`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.enterSelectionMode(initialSelectedId = 1L)
+        viewModel.toggleSelectLocation(2L)
+
+        viewModel.onRequestBulkDelete()
+        assertTrue(viewModel.uiState.value.showBulkDeleteDialog)
+        assertFalse(viewModel.uiState.value.deleteLinkedChildren)
+
+        viewModel.onToggleDeleteLinkedChildren(true)
+        assertTrue(viewModel.uiState.value.deleteLinkedChildren)
+
+        viewModel.onConfirmBulkDelete()
+        advanceUntilIdle()
+
+        assertEquals(listOf(1L, 2L), fakeLocationRepository.lastDeletedMultipleIds)
+        assertTrue(fakeLocationRepository.lastDeletedMultipleLinked)
+        assertFalse(viewModel.uiState.value.isSelectionMode)
+        assertFalse(viewModel.uiState.value.showBulkDeleteDialog)
+        assertTrue(viewModel.uiState.value.selectedLocationIds.isEmpty())
+        assertEquals("2 lokasi berhasil dihapus", viewModel.uiState.value.userMessage)
     }
 }
 

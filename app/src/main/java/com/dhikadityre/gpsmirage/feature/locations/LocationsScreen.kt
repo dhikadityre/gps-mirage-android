@@ -1,9 +1,14 @@
 package com.dhikadityre.gpsmirage.feature.locations
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,8 +26,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dhikadityre.dev.tools.R
 import com.dhikadityre.gpsmirage.core.geo.MapIntentHelper
 import com.dhikadityre.gpsmirage.core.model.AnchorWithMocks
 import com.dhikadityre.gpsmirage.core.model.Location
@@ -40,6 +47,10 @@ fun LocationsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var selectedAnchorForGenerate by remember { mutableStateOf<Location?>(null) }
+
+    BackHandler(enabled = uiState.isSelectionMode) {
+        viewModel.exitSelectionMode()
+    }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { msg ->
@@ -59,40 +70,128 @@ fun LocationsScreen(
         )
     }
 
+    // Determine currently visible locations for active tab & filters
+    val currentVisibleLocations: List<Location> = remember(
+        uiState.selectedTab,
+        uiState.anchors,
+        uiState.mockTargets,
+        uiState.nativeLocations,
+        uiState.groupedList,
+        uiState.isFilterFavoriteOnly,
+        uiState.selectedFolderId,
+        uiState.isSearchActive,
+        uiState.searchQuery,
+        uiState.searchResults
+    ) {
+        val baseList = when (uiState.selectedTab) {
+            LocationsTab.ANCHORS -> if (uiState.isSearchActive && uiState.searchQuery.isNotBlank()) {
+                uiState.searchResults.filter { it.type == LocationType.CENTER_ANCHOR }
+            } else uiState.anchors
+            LocationsTab.MOCK_TARGETS -> if (uiState.isSearchActive && uiState.searchQuery.isNotBlank()) {
+                uiState.searchResults.filter { it.type == LocationType.MOCK_TARGET }
+            } else uiState.mockTargets
+            LocationsTab.GROUPED -> if (uiState.isSearchActive && uiState.searchQuery.isNotBlank()) {
+                uiState.searchResults.filter { it.type == LocationType.CENTER_ANCHOR }
+            } else uiState.groupedList.map { it.anchor }
+            LocationsTab.NATIVE -> if (uiState.isSearchActive && uiState.searchQuery.isNotBlank()) {
+                uiState.searchResults.filter { it.type == LocationType.NATIVE }
+            } else uiState.nativeLocations
+        }
+        filterLocations(baseList, uiState.isFilterFavoriteOnly, uiState.selectedFolderId)
+    }
+
+    val visibleIds = remember(currentVisibleLocations) { currentVisibleLocations.map { it.id } }
+    val groupedChildMap: Map<Long, List<Long>> = remember(uiState.groupedList) {
+        uiState.groupedList.associate { it.anchor.id to it.mocks.map { m -> m.id } }
+    }
+
+    val allTargetIds: Set<Long> = remember(visibleIds, groupedChildMap, uiState.selectedTab) {
+        val set = mutableSetOf<Long>()
+        set.addAll(visibleIds)
+        if (uiState.selectedTab == LocationsTab.GROUPED) {
+            visibleIds.forEach { anchorId ->
+                groupedChildMap[anchorId]?.let { set.addAll(it) }
+            }
+        }
+        set
+    }
+
+    val isAllSelected = allTargetIds.isNotEmpty() && uiState.selectedLocationIds.containsAll(allTargetIds)
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    if (uiState.isSearchActive) {
-                        OutlinedTextField(
-                            value = uiState.searchQuery,
-                            onValueChange = { viewModel.onSearchQueryChanged(it) },
-                            placeholder = { Text("Search locations...") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+            if (uiState.isSelectionMode) {
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.exitSelectionMode() }) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
+                        }
+                    },
+                    title = {
+                        Text(
+                            text = stringResource(R.string.locations_selected_count, uiState.selectedLocationIds.size),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                    } else {
-                        Text("Locations & Radius Anchors")
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.toggleSelectAll(visibleIds, groupedChildMap) }) {
+                            Icon(
+                                if (isAllSelected) Icons.Default.Deselect else Icons.Default.SelectAll,
+                                contentDescription = if (isAllSelected) "Deselect All" else "Select All"
+                            )
+                        }
+                        IconButton(
+                            onClick = { viewModel.onRequestBulkDelete() },
+                            enabled = uiState.selectedLocationIds.isNotEmpty()
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Hapus Terpilih",
+                                tint = if (uiState.selectedLocationIds.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                            )
+                        }
                     }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.onToggleSearch() }) {
-                        Icon(
-                            if (uiState.isSearchActive) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = "Search"
-                        )
+                )
+            } else {
+                TopAppBar(
+                    title = {
+                        if (uiState.isSearchActive) {
+                            OutlinedTextField(
+                                value = uiState.searchQuery,
+                                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                                placeholder = { Text(stringResource(R.string.locations_search_placeholder)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            Text(stringResource(R.string.locations_title))
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.enterSelectionMode() }) {
+                            Icon(Icons.Default.Checklist, contentDescription = null)
+                        }
+                        IconButton(onClick = { viewModel.onToggleSearch() }) {
+                            Icon(
+                                if (uiState.isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                                contentDescription = stringResource(R.string.action_search)
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddLocation,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Location")
+            if (!uiState.isSelectionMode) {
+                FloatingActionButton(
+                    onClick = onAddLocation,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                }
             }
         }
     ) { padding ->
@@ -108,23 +207,27 @@ fun LocationsScreen(
             ) {
                 Tab(
                     selected = uiState.selectedTab == LocationsTab.ANCHORS,
-                    onClick = { viewModel.onTabSelected(LocationsTab.ANCHORS) },
-                    text = { Text("Anchors (${uiState.anchors.size})") }
+                    enabled = !uiState.isSelectionMode,
+                    onClick = { if (!uiState.isSelectionMode) viewModel.onTabSelected(LocationsTab.ANCHORS) },
+                    text = { Text(stringResource(R.string.locations_tab_anchors, uiState.anchors.size)) }
                 )
                 Tab(
                     selected = uiState.selectedTab == LocationsTab.MOCK_TARGETS,
-                    onClick = { viewModel.onTabSelected(LocationsTab.MOCK_TARGETS) },
-                    text = { Text("Mock Targets (${uiState.mockTargets.size})") }
+                    enabled = !uiState.isSelectionMode,
+                    onClick = { if (!uiState.isSelectionMode) viewModel.onTabSelected(LocationsTab.MOCK_TARGETS) },
+                    text = { Text(stringResource(R.string.locations_tab_mock_targets, uiState.mockTargets.size)) }
                 )
                 Tab(
                     selected = uiState.selectedTab == LocationsTab.GROUPED,
-                    onClick = { viewModel.onTabSelected(LocationsTab.GROUPED) },
-                    text = { Text("Grouped (${uiState.groupedList.size})") }
+                    enabled = !uiState.isSelectionMode,
+                    onClick = { if (!uiState.isSelectionMode) viewModel.onTabSelected(LocationsTab.GROUPED) },
+                    text = { Text(stringResource(R.string.locations_tab_grouped, uiState.groupedList.size)) }
                 )
                 Tab(
                     selected = uiState.selectedTab == LocationsTab.NATIVE,
-                    onClick = { viewModel.onTabSelected(LocationsTab.NATIVE) },
-                    text = { Text("Native (${uiState.nativeLocations.size})") }
+                    enabled = !uiState.isSelectionMode,
+                    onClick = { if (!uiState.isSelectionMode) viewModel.onTabSelected(LocationsTab.NATIVE) },
+                    text = { Text(stringResource(R.string.locations_tab_native, uiState.nativeLocations.size)) }
                 )
             }
 
@@ -219,6 +322,7 @@ fun LocationsScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(filteredAnchors, key = { it.id }) { anchor ->
+                                val isSelected = uiState.selectedLocationIds.contains(anchor.id)
                                 LocationCardItem(
                                     location = anchor,
                                     tagLabel = "Center Anchor",
@@ -226,7 +330,21 @@ fun LocationsScreen(
                                     tagContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                     radiusText = "Radius: ${(anchor.radiusMeters ?: 500.0).toInt()}m",
                                     duplicateAnchor = null,
-                                    onClick = { onLocationClick(anchor.id) },
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isSelected = isSelected,
+                                    onToggleSelect = { viewModel.toggleSelectLocation(anchor.id) },
+                                    onLongClick = {
+                                        if (!uiState.isSelectionMode) {
+                                            viewModel.enterSelectionMode(anchor.id)
+                                        }
+                                    },
+                                    onClick = {
+                                        if (uiState.isSelectionMode) {
+                                            viewModel.toggleSelectLocation(anchor.id)
+                                        } else {
+                                            onLocationClick(anchor.id)
+                                        }
+                                    },
                                     onToggleFavorite = { viewModel.onToggleFavorite(anchor.id, anchor.isFavorite) },
                                     onDelete = { viewModel.onDeleteRequest(anchor) },
                                     onOpenGoogleMaps = {
@@ -271,6 +389,7 @@ fun LocationsScreen(
                                 val parentAnchor = mockLocation.parentAnchorId?.let { pid ->
                                     uiState.anchors.find { it.id == pid }
                                 }
+                                val isSelected = uiState.selectedLocationIds.contains(mockLocation.id)
                                 LocationCardItem(
                                     location = mockLocation,
                                     tagLabel = "Mock Target",
@@ -279,7 +398,21 @@ fun LocationsScreen(
                                     radiusText = null,
                                     duplicateAnchor = duplicateAnchor,
                                     parentAnchorName = parentAnchor?.name,
-                                    onClick = { onLocationClick(mockLocation.id) },
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isSelected = isSelected,
+                                    onToggleSelect = { viewModel.toggleSelectLocation(mockLocation.id) },
+                                    onLongClick = {
+                                        if (!uiState.isSelectionMode) {
+                                            viewModel.enterSelectionMode(mockLocation.id)
+                                        }
+                                    },
+                                    onClick = {
+                                        if (uiState.isSelectionMode) {
+                                            viewModel.toggleSelectLocation(mockLocation.id)
+                                        } else {
+                                            onLocationClick(mockLocation.id)
+                                        }
+                                    },
                                     onToggleFavorite = { viewModel.onToggleFavorite(mockLocation.id, mockLocation.isFavorite) },
                                     onDelete = { viewModel.onDeleteRequest(mockLocation) },
                                     onOpenGoogleMaps = {
@@ -313,10 +446,31 @@ fun LocationsScreen(
                         ) {
                             items(uiState.groupedList, key = { it.anchor.id }) { anchorWithMocks ->
                                 val isExpanded = uiState.expandedAnchorIds.contains(anchorWithMocks.anchor.id)
+                                val isAnchorSelected = uiState.selectedLocationIds.contains(anchorWithMocks.anchor.id)
+                                val childIds = anchorWithMocks.mocks.map { it.id }
                                 GroupedAnchorCardItem(
                                     item = anchorWithMocks,
                                     isExpanded = isExpanded,
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isAnchorSelected = isAnchorSelected,
+                                    selectedSubMockIds = uiState.selectedLocationIds,
                                     onToggleExpand = { viewModel.onToggleAnchorExpanded(anchorWithMocks.anchor.id) },
+                                    onToggleSelectAnchor = {
+                                        viewModel.toggleSelectLocation(anchorWithMocks.anchor.id, isAnchor = true, childIds = childIds)
+                                    },
+                                    onToggleSelectSubMock = { subMockId ->
+                                        viewModel.toggleSelectLocation(subMockId)
+                                    },
+                                    onLongClickAnchor = {
+                                        if (!uiState.isSelectionMode) {
+                                            viewModel.enterSelectionMode(anchorWithMocks.anchor.id)
+                                        }
+                                    },
+                                    onLongClickSubMock = { subMockId ->
+                                        if (!uiState.isSelectionMode) {
+                                            viewModel.enterSelectionMode(subMockId)
+                                        }
+                                    },
                                     onAnchorClick = { onLocationClick(anchorWithMocks.anchor.id) },
                                     onPreviewAnchor = {
                                         viewModel.onPreviewLocation(anchorWithMocks.anchor, parentAnchor = null, onNavigateToMap)
@@ -367,6 +521,7 @@ fun LocationsScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(filteredNatives, key = { it.id }) { nativeLocation ->
+                                val isSelected = uiState.selectedLocationIds.contains(nativeLocation.id)
                                 LocationCardItem(
                                     location = nativeLocation,
                                     tagLabel = "Native",
@@ -374,7 +529,21 @@ fun LocationsScreen(
                                     tagContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                                     radiusText = nativeLocation.radiusMeters?.let { "Radius ${it.toInt()}m" },
                                     duplicateAnchor = null,
-                                    onClick = { onLocationClick(nativeLocation.id) },
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isSelected = isSelected,
+                                    onToggleSelect = { viewModel.toggleSelectLocation(nativeLocation.id) },
+                                    onLongClick = {
+                                        if (!uiState.isSelectionMode) {
+                                            viewModel.enterSelectionMode(nativeLocation.id)
+                                        }
+                                    },
+                                    onClick = {
+                                        if (uiState.isSelectionMode) {
+                                            viewModel.toggleSelectLocation(nativeLocation.id)
+                                        } else {
+                                            onLocationClick(nativeLocation.id)
+                                        }
+                                    },
                                     onToggleFavorite = { viewModel.onToggleFavorite(nativeLocation.id, nativeLocation.isFavorite) },
                                     onDelete = { viewModel.onDeleteRequest(nativeLocation) },
                                     onOpenGoogleMaps = {
@@ -393,13 +562,114 @@ fun LocationsScreen(
         }
     }
 
+    if (uiState.showBulkDeleteDialog) {
+        val allLocations = (uiState.anchors + uiState.mockTargets + uiState.nativeLocations).distinctBy { it.id }
+        val selectedLocations = allLocations.filter { uiState.selectedLocationIds.contains(it.id) }
+        val hasSelectedAnchor = selectedLocations.any { it.type == LocationType.CENTER_ANCHOR }
+
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissBulkDelete() },
+            icon = {
+                Icon(
+                    Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(stringResource(R.string.locations_delete_selected_title, uiState.selectedLocationIds.size))
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = stringResource(R.string.locations_delete_selected_message, uiState.selectedLocationIds.size),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            selectedLocations.take(4).forEach { loc ->
+                                Text(
+                                    text = "• ${loc.name}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if (selectedLocations.size > 4) {
+                                Text(
+                                    text = "  ...dan ${selectedLocations.size - 4} lokasi lainnya",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (hasSelectedAnchor) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.onToggleDeleteLinkedChildren(!uiState.deleteLinkedChildren) }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = uiState.deleteLinkedChildren,
+                                onCheckedChange = { viewModel.onToggleDeleteLinkedChildren(it) }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.locations_delete_linked_targets),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.onConfirmBulkDelete() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.locations_delete_selected_btn, uiState.selectedLocationIds.size))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onDismissBulkDelete() }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     uiState.locationToDelete?.let { location ->
         AlertDialog(
             onDismissRequest = { viewModel.onDeleteDismissed() },
+            icon = {
+                Icon(
+                    Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
             title = { Text("Delete Location?") },
             text = { Text("Are you sure you want to delete \"${location.name}\"?") },
             confirmButton = {
-                TextButton(onClick = { viewModel.onDeleteConfirmed() }) { Text("Delete") }
+                Button(
+                    onClick = { viewModel.onDeleteConfirmed() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onDeleteDismissed() }) { Text("Cancel") }
@@ -419,7 +689,7 @@ private fun filterLocations(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun LocationCardItem(
     location: Location,
@@ -429,6 +699,10 @@ private fun LocationCardItem(
     radiusText: String?,
     duplicateAnchor: Location?,
     parentAnchorName: String? = null,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {},
+    onLongClick: () -> Unit = {},
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDelete: () -> Unit,
@@ -436,10 +710,26 @@ private fun LocationCardItem(
     onPreview: () -> Unit,
     onLinkToAnchor: (Long) -> Unit
 ) {
+    val shape = RoundedCornerShape(12.dp)
     ElevatedCard(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isSelected) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, shape)
+                else Modifier
+            )
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+        shape = shape,
+        colors = if (isSelected) {
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+            )
+        } else {
+            CardDefaults.elevatedCardColors()
+        }
     ) {
         Column(
             modifier = Modifier
@@ -511,78 +801,86 @@ private fun LocationCardItem(
 
                 Spacer(Modifier.width(8.dp))
 
-                // Compact Actions on Top-Right
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    IconButton(
-                        onClick = onToggleFavorite,
+                if (isSelectionMode) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelect() },
                         modifier = Modifier.size(32.dp)
+                    )
+                } else {
+                    // Compact Actions on Top-Right
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Icon(
-                            if (location.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = "Favorite",
-                            tint = if (location.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onPreview,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = "Preview on Map",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    var showMenu by remember { mutableStateOf(false) }
-                    Box {
                         IconButton(
-                            onClick = { showMenu = true },
+                            onClick = onToggleFavorite,
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = "More",
+                                if (location.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = "Favorite",
+                                tint = if (location.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Buka di Google Maps") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onOpenGoogleMaps()
-                                }
+
+                        IconButton(
+                            onClick = onPreview,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = "Preview on Map",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
                             )
-                            DropdownMenuItem(
-                                text = { Text("Edit") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onClick()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Delete") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onDelete()
-                                }
-                            )
+                        }
+
+                        var showMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "More",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.locations_btn_open_google_maps)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onOpenGoogleMaps()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_edit)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.location_delete)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onDelete()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -639,14 +937,14 @@ private fun LocationCardItem(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text("Hapus Duplikat", fontSize = 12.sp, maxLines = 1)
+                                Text(stringResource(R.string.locations_btn_delete_duplicates), fontSize = 12.sp, maxLines = 1)
                             }
                             Button(
                                 onClick = { onLinkToAnchor(duplicateAnchor.id) },
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text("Kaitkan Anchor", fontSize = 12.sp, maxLines = 1)
+                                Text(stringResource(R.string.locations_btn_link_anchor), fontSize = 12.sp, maxLines = 1)
                             }
                         }
                     }
@@ -656,12 +954,19 @@ private fun LocationCardItem(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun GroupedAnchorCardItem(
     item: AnchorWithMocks,
     isExpanded: Boolean,
+    isSelectionMode: Boolean = false,
+    isAnchorSelected: Boolean = false,
+    selectedSubMockIds: Set<Long> = emptySet(),
     onToggleExpand: () -> Unit,
+    onToggleSelectAnchor: () -> Unit = {},
+    onToggleSelectSubMock: (Long) -> Unit = {},
+    onLongClickAnchor: () -> Unit = {},
+    onLongClickSubMock: (Long) -> Unit = {},
     onAnchorClick: () -> Unit,
     onPreviewAnchor: () -> Unit,
     onGenerateSubMock: () -> Unit,
@@ -672,16 +977,38 @@ private fun GroupedAnchorCardItem(
     onToggleFavorite: (Location) -> Unit,
     onDeleteLocation: (Location) -> Unit
 ) {
+    val shape = RoundedCornerShape(14.dp)
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isAnchorSelected) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, shape)
+                else Modifier
+            ),
+        shape = shape,
+        colors = if (isAnchorSelected) {
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+            )
+        } else {
+            CardDefaults.elevatedCardColors()
+        }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Header: Parent Center Anchor
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onToggleExpand() }
+                    .combinedClickable(
+                        onClick = {
+                            if (isSelectionMode) {
+                                onToggleSelectAnchor()
+                            } else {
+                                onToggleExpand()
+                            }
+                        },
+                        onLongClick = onLongClickAnchor
+                    )
                     .padding(14.dp)
             ) {
                 // Top Row: Badges on left with FlowRow, Action Buttons on right with compact size
@@ -732,90 +1059,98 @@ private fun GroupedAnchorCardItem(
 
                     Spacer(Modifier.width(8.dp))
 
-                    // Compact Action Buttons on Top-Right
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        IconButton(
-                            onClick = onPreviewAnchor,
+                    if (isSelectionMode) {
+                        Checkbox(
+                            checked = isAnchorSelected,
+                            onCheckedChange = { onToggleSelectAnchor() },
                             modifier = Modifier.size(32.dp)
+                        )
+                    } else {
+                        // Compact Action Buttons on Top-Right
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = "Preview Anchor on Map",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = onToggleExpand,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = "Expand",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        var showAnchorMenu by remember { mutableStateOf(false) }
-                        Box {
                             IconButton(
-                                onClick = { showAnchorMenu = true },
+                                onClick = onPreviewAnchor,
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
-                                    Icons.Default.MoreVert,
-                                    contentDescription = "Menu Anchor",
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = "Preview Anchor on Map",
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
-                            DropdownMenu(
-                                expanded = showAnchorMenu,
-                                onDismissRequest = { showAnchorMenu = false }
+
+                            IconButton(
+                                onClick = onToggleExpand,
+                                modifier = Modifier.size(32.dp)
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text("Generate Sub-Mock") },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    },
-                                    onClick = {
-                                        showAnchorMenu = false
-                                        onGenerateSubMock()
-                                    }
+                                Icon(
+                                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Expand",
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                DropdownMenuItem(
-                                    text = { Text("Buka di Google Maps") },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    },
-                                    onClick = {
-                                        showAnchorMenu = false
-                                        onOpenGoogleMapsAnchor()
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Edit") },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    },
-                                    onClick = {
-                                        showAnchorMenu = false
-                                        onAnchorClick()
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Delete") },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    },
-                                    onClick = {
-                                        showAnchorMenu = false
-                                        onDeleteLocation(item.anchor)
-                                    }
-                                )
+                            }
+
+                            var showAnchorMenu by remember { mutableStateOf(false) }
+                            Box {
+                                IconButton(
+                                    onClick = { showAnchorMenu = true },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.MoreVert,
+                                        contentDescription = "Menu Anchor",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showAnchorMenu,
+                                    onDismissRequest = { showAnchorMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.locations_btn_generate_sub_mock)) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        },
+                                        onClick = {
+                                            showAnchorMenu = false
+                                            onGenerateSubMock()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.locations_btn_open_google_maps)) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        },
+                                        onClick = {
+                                            showAnchorMenu = false
+                                            onOpenGoogleMapsAnchor()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.action_edit)) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        },
+                                        onClick = {
+                                            showAnchorMenu = false
+                                            onAnchorClick()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.location_delete)) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        },
+                                        onClick = {
+                                            showAnchorMenu = false
+                                            onDeleteLocation(item.anchor)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -863,12 +1198,30 @@ private fun GroupedAnchorCardItem(
                         )
                     } else {
                         item.mocks.forEach { subMock ->
+                            val isSubMockSelected = selectedSubMockIds.contains(subMock.id)
                             Card(
-                                onClick = { onSubMockClick(subMock.id) },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                )
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (isSelectionMode) {
+                                                onToggleSelectSubMock(subMock.id)
+                                            } else {
+                                                onSubMockClick(subMock.id)
+                                            }
+                                        },
+                                        onLongClick = { onLongClickSubMock(subMock.id) }
+                                    ),
+                                colors = if (isSubMockSelected) {
+                                    CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                    )
+                                } else {
+                                    CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                },
+                                border = if (isSubMockSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -925,80 +1278,88 @@ private fun GroupedAnchorCardItem(
 
                                     Spacer(Modifier.width(6.dp))
 
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        IconButton(
-                                            onClick = { onToggleFavorite(subMock) },
+                                    if (isSelectionMode) {
+                                        Checkbox(
+                                            checked = isSubMockSelected,
+                                            onCheckedChange = { onToggleSelectSubMock(subMock.id) },
                                             modifier = Modifier.size(32.dp)
+                                        )
+                                    } else {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                                         ) {
-                                            Icon(
-                                                if (subMock.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                                                contentDescription = "Favorite",
-                                                tint = if (subMock.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-
-                                        IconButton(
-                                            onClick = { onPreviewSubMock(subMock) },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.PlayArrow,
-                                                contentDescription = "Preview Sub-Mock on Map",
-                                                tint = MaterialTheme.colorScheme.tertiary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-
-                                        var showSubMockMenu by remember { mutableStateOf(false) }
-                                        Box {
                                             IconButton(
-                                                onClick = { showSubMockMenu = true },
+                                                onClick = { onToggleFavorite(subMock) },
                                                 modifier = Modifier.size(32.dp)
                                             ) {
                                                 Icon(
-                                                    Icons.Default.MoreVert,
-                                                    contentDescription = "Menu Sub-Mock",
+                                                    if (subMock.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                                    contentDescription = "Favorite",
+                                                    tint = if (subMock.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                                                     modifier = Modifier.size(18.dp)
                                                 )
                                             }
-                                            DropdownMenu(
-                                                expanded = showSubMockMenu,
-                                                onDismissRequest = { showSubMockMenu = false }
+
+                                            IconButton(
+                                                onClick = { onPreviewSubMock(subMock) },
+                                                modifier = Modifier.size(32.dp)
                                             ) {
-                                                DropdownMenuItem(
-                                                    text = { Text("Buka di Google Maps") },
-                                                    leadingIcon = {
-                                                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
-                                                    },
-                                                    onClick = {
-                                                        showSubMockMenu = false
-                                                        onOpenGoogleMapsSubMock(subMock)
-                                                    }
+                                                Icon(
+                                                    Icons.Default.PlayArrow,
+                                                    contentDescription = "Preview Sub-Mock on Map",
+                                                    tint = MaterialTheme.colorScheme.tertiary,
+                                                    modifier = Modifier.size(18.dp)
                                                 )
-                                                DropdownMenuItem(
-                                                    text = { Text("Edit") },
-                                                    leadingIcon = {
-                                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                                                    },
-                                                    onClick = {
-                                                        showSubMockMenu = false
-                                                        onSubMockClick(subMock.id)
-                                                    }
-                                                )
-                                                DropdownMenuItem(
-                                                    text = { Text("Delete") },
-                                                    leadingIcon = {
-                                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                                                    },
-                                                    onClick = {
-                                                        showSubMockMenu = false
-                                                        onDeleteLocation(subMock)
-                                                    }
-                                                )
+                                            }
+
+                                            var showSubMockMenu by remember { mutableStateOf(false) }
+                                            Box {
+                                                IconButton(
+                                                    onClick = { showSubMockMenu = true },
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.MoreVert,
+                                                        contentDescription = "Menu Sub-Mock",
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                                DropdownMenu(
+                                                    expanded = showSubMockMenu,
+                                                    onDismissRequest = { showSubMockMenu = false }
+                                                ) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.locations_btn_open_google_maps)) },
+                                                        leadingIcon = {
+                                                            Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        },
+                                                        onClick = {
+                                                            showSubMockMenu = false
+                                                            onOpenGoogleMapsSubMock(subMock)
+                                                        }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.action_edit)) },
+                                                        leadingIcon = {
+                                                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        },
+                                                        onClick = {
+                                                            showSubMockMenu = false
+                                                            onSubMockClick(subMock.id)
+                                                        }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.location_delete)) },
+                                                        leadingIcon = {
+                                                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        },
+                                                        onClick = {
+                                                            showSubMockMenu = false
+                                                            onDeleteLocation(subMock)
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -1055,7 +1416,7 @@ fun GenerateSubMockDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Jumlah Titik",
+                            text = stringResource(R.string.locations_generate_count_label),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -1098,12 +1459,12 @@ fun GenerateSubMockDialog(
             Button(
                 onClick = { onConfirm(count) }
             ) {
-                Text("Generate ($count Titik)")
+                Text(stringResource(R.string.locations_generate_count_btn, count))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

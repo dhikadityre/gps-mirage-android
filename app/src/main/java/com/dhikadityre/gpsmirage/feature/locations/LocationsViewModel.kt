@@ -63,6 +63,10 @@ class LocationsViewModel @Inject constructor(
                         searchQuery = current.searchQuery,
                         searchResults = current.searchResults,
                         isSearchActive = current.isSearchActive,
+                        isSelectionMode = current.isSelectionMode,
+                        selectedLocationIds = current.selectedLocationIds,
+                        showBulkDeleteDialog = current.showBulkDeleteDialog,
+                        deleteLinkedChildren = current.deleteLinkedChildren,
                         locationToDelete = current.locationToDelete
                     )
                 }
@@ -168,6 +172,102 @@ class LocationsViewModel @Inject constructor(
 
     fun onDeleteDismissed() {
         _uiState.update { it.copy(locationToDelete = null) }
+    }
+
+    fun enterSelectionMode(initialSelectedId: Long? = null) {
+        _uiState.update {
+            it.copy(
+                isSelectionMode = true,
+                selectedLocationIds = if (initialSelectedId != null) setOf(initialSelectedId) else emptySet()
+            )
+        }
+    }
+
+    fun exitSelectionMode() {
+        _uiState.update {
+            it.copy(
+                isSelectionMode = false,
+                selectedLocationIds = emptySet(),
+                showBulkDeleteDialog = false,
+                deleteLinkedChildren = false
+            )
+        }
+    }
+
+    fun toggleSelectLocation(id: Long, isAnchor: Boolean = false, childIds: List<Long> = emptyList()) {
+        _uiState.update { state ->
+            val currentSelected = state.selectedLocationIds
+            val isCurrentlySelected = currentSelected.contains(id)
+            val updated = if (isAnchor && childIds.isNotEmpty()) {
+                val targetGroup = setOf(id) + childIds
+                if (isCurrentlySelected) {
+                    currentSelected - targetGroup
+                } else {
+                    currentSelected + targetGroup
+                }
+            } else {
+                if (isCurrentlySelected) {
+                    currentSelected - id
+                } else {
+                    currentSelected + id
+                }
+            }
+            state.copy(selectedLocationIds = updated)
+        }
+    }
+
+    fun toggleSelectAll(visibleIds: List<Long>, groupedChildMap: Map<Long, List<Long>> = emptyMap()) {
+        _uiState.update { state ->
+            val allTargetIds = mutableSetOf<Long>()
+            for (id in visibleIds) {
+                allTargetIds.add(id)
+                groupedChildMap[id]?.let { children ->
+                    allTargetIds.addAll(children)
+                }
+            }
+
+            val currentSelected = state.selectedLocationIds
+            val allSelected = allTargetIds.isNotEmpty() && currentSelected.containsAll(allTargetIds)
+            val updated = if (allSelected) {
+                currentSelected - allTargetIds
+            } else {
+                currentSelected + allTargetIds
+            }
+            state.copy(selectedLocationIds = updated)
+        }
+    }
+
+    fun onRequestBulkDelete() {
+        if (_uiState.value.selectedLocationIds.isEmpty()) return
+        _uiState.update { it.copy(showBulkDeleteDialog = true) }
+    }
+
+    fun onDismissBulkDelete() {
+        _uiState.update { it.copy(showBulkDeleteDialog = false, deleteLinkedChildren = false) }
+    }
+
+    fun onToggleDeleteLinkedChildren(checked: Boolean) {
+        _uiState.update { it.copy(deleteLinkedChildren = checked) }
+    }
+
+    fun onConfirmBulkDelete() {
+        val selectedIds = _uiState.value.selectedLocationIds.toList()
+        if (selectedIds.isEmpty()) return
+        val deleteLinked = _uiState.value.deleteLinkedChildren
+
+        viewModelScope.launch {
+            locationRepository.deleteMultiple(selectedIds, deleteLinked)
+            val count = selectedIds.size
+            _uiState.update {
+                it.copy(
+                    isSelectionMode = false,
+                    selectedLocationIds = emptySet(),
+                    showBulkDeleteDialog = false,
+                    deleteLinkedChildren = false,
+                    userMessage = "$count lokasi berhasil dihapus"
+                )
+            }
+        }
     }
 
     fun onMoveToFolder(locationId: Long, folderId: Long?) {

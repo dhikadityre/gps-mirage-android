@@ -60,6 +60,12 @@ interface LocationDao {
     @Query("DELETE FROM locations WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("DELETE FROM locations WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
+
+    @Query("DELETE FROM locations WHERE parent_anchor_id IN (:anchorIds)")
+    suspend fun deleteChildrenOfAnchors(anchorIds: List<Long>)
+
     @Delete
     suspend fun delete(location: LocationEntity)
 

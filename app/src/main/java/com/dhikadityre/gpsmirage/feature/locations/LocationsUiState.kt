@@ -26,6 +26,10 @@ data class LocationsUiState(
     val searchQuery: String = "",
     val searchResults: List<Location> = emptyList(),
     val isSearchActive: Boolean = false,
+    val isSelectionMode: Boolean = false,
+    val selectedLocationIds: Set<Long> = emptySet(),
+    val showBulkDeleteDialog: Boolean = false,
+    val deleteLinkedChildren: Boolean = false,
     val locationToDelete: Location? = null,
     val userMessage: String? = null,
     val error: String? = null

@@ -86,6 +86,14 @@ class LocationRepositoryImpl @Inject constructor(
     override suspend fun delete(id: Long) =
         locationDao.deleteById(id)
 
+    override suspend fun deleteMultiple(ids: List<Long>, deleteLinkedChildren: Boolean) {
+        if (ids.isEmpty()) return
+        if (deleteLinkedChildren) {
+            locationDao.deleteChildrenOfAnchors(ids)
+        }
+        locationDao.deleteByIds(ids)
+    }
+
     override suspend fun isDuplicate(name: String, latitude: Double, longitude: Double): Boolean =
         locationDao.countDuplicates(latitude, longitude, name) > 0
 }

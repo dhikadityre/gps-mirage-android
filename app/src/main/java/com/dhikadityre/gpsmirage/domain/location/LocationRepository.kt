@@ -27,6 +27,7 @@ interface LocationRepository {
     suspend fun updateFolder(id: Long, folderId: Long?)
     suspend fun updateParentAnchor(id: Long, parentAnchorId: Long?)
     suspend fun delete(id: Long)
+    suspend fun deleteMultiple(ids: List<Long>, deleteLinkedChildren: Boolean = false)
     suspend fun isDuplicate(name: String, latitude: Double, longitude: Double): Boolean
 }
 
