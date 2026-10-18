@@ -25,6 +25,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val RADIUS_ENABLED = booleanPreferencesKey("radius_enabled")
         val ANCHOR_LAT = doublePreferencesKey("anchor_latitude")
         val ANCHOR_LNG = doublePreferencesKey("anchor_longitude")
+        val ANCHOR_EXPLICITLY_NULL = booleanPreferencesKey("anchor_explicitly_null")
         val RADIUS_METERS = doublePreferencesKey("radius_meters")
     }
 
@@ -37,15 +38,18 @@ class SettingsRepositoryImpl @Inject constructor(
             }
         }
         .map { preferences ->
-            val isEnabled = preferences[PreferencesKeys.RADIUS_ENABLED] ?: false
+            val isEnabled = preferences[PreferencesKeys.RADIUS_ENABLED] ?: true
             val lat = preferences[PreferencesKeys.ANCHOR_LAT]
             val lng = preferences[PreferencesKeys.ANCHOR_LNG]
+            val isExplicitlyNull = preferences[PreferencesKeys.ANCHOR_EXPLICITLY_NULL] ?: false
             val radiusMeters = preferences[PreferencesKeys.RADIUS_METERS] ?: 500.0
 
             val anchor = if (lat != null && lng != null) {
                 Coordinate(latitude = lat, longitude = lng)
-            } else {
+            } else if (isExplicitlyNull) {
                 null
+            } else {
+                RadiusConfig.MAYAPADA_TOWER
             }
 
             RadiusConfig(
@@ -61,9 +65,11 @@ class SettingsRepositoryImpl @Inject constructor(
             if (config.anchor != null) {
                 preferences[PreferencesKeys.ANCHOR_LAT] = config.anchor.latitude
                 preferences[PreferencesKeys.ANCHOR_LNG] = config.anchor.longitude
+                preferences[PreferencesKeys.ANCHOR_EXPLICITLY_NULL] = false
             } else {
                 preferences.remove(PreferencesKeys.ANCHOR_LAT)
                 preferences.remove(PreferencesKeys.ANCHOR_LNG)
+                preferences[PreferencesKeys.ANCHOR_EXPLICITLY_NULL] = true
             }
             preferences[PreferencesKeys.RADIUS_METERS] = config.radiusMeters
         }

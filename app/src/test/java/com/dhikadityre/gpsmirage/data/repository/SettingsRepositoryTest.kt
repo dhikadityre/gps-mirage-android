@@ -56,8 +56,8 @@ class SettingsRepositoryTest {
     fun defaultRadiusConfig_returnsDefaultValues() = testScope.runTest {
         val config = repository.radiusConfig.first()
 
-        assertFalse(config.isEnabled)
-        assertNull(config.anchor)
+        assertTrue(config.isEnabled)
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, config.anchor)
         assertEquals(500.0, config.radiusMeters, 0.001)
     }
 

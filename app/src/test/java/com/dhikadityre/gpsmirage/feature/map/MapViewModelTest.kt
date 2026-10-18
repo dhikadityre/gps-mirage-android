@@ -168,10 +168,11 @@ class MapViewModelTest {
     @Test
     fun `when radius is disabled, selection anywhere is valid and within radius`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
+        fakeSettingsRepository.updateRadiusConfig(RadiusConfig(isEnabled = false))
         viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         advanceUntilIdle()
 
-        // Radius disabled by default
+        // Radius explicitly disabled
         assertFalse(viewModel.uiState.value.radiusConfig.isEnabled)
 
         viewModel.onMapTap(lat = 37.7749, lng = -122.4194)
@@ -267,6 +268,7 @@ class MapViewModelTest {
         val viewModel = createViewModel()
         viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         val anchor = Coordinate(latitude = -6.2088, longitude = 106.8456)
+        fakeSettingsRepository.updateRadiusConfig(RadiusConfig(isEnabled = false))
         advanceUntilIdle()
 
         // Select point while radius is disabled

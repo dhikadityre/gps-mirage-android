@@ -28,13 +28,7 @@ class SettingsViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private class FakeSettingsRepository : SettingsRepository {
-        val configFlow = MutableStateFlow(
-            RadiusConfig(
-                isEnabled = false,
-                anchor = Coordinate(-6.2088, 106.8456),
-                radiusMeters = 500.0
-            )
-        )
+        val configFlow = MutableStateFlow(RadiusConfig())
         override val radiusConfig: Flow<RadiusConfig> = configFlow
 
         override suspend fun updateRadiusConfig(config: RadiusConfig) {
@@ -69,9 +63,9 @@ class SettingsViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertFalse(state.radiusConfig.isEnabled)
-        assertEquals("-6.208800", state.latitudeInput)
-        assertEquals("106.845600", state.longitudeInput)
+        assertTrue(state.radiusConfig.isEnabled)
+        assertEquals("-6.213726", state.latitudeInput)
+        assertEquals("106.819897", state.longitudeInput)
         assertEquals("500", state.radiusInput)
         assertEquals(500f, state.radiusSliderValue)
     }
@@ -81,11 +75,11 @@ class SettingsViewModelTest {
         viewModel = SettingsViewModel(settingsRepository, deviceLocationProvider)
         advanceUntilIdle()
 
-        viewModel.onRadiusToggleChanged(true)
+        viewModel.onRadiusToggleChanged(false)
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.radiusConfig.isEnabled)
-        assertTrue(settingsRepository.configFlow.value.isEnabled)
+        assertFalse(viewModel.uiState.value.radiusConfig.isEnabled)
+        assertFalse(settingsRepository.configFlow.value.isEnabled)
     }
 
     @Test
@@ -118,7 +112,7 @@ class SettingsViewModelTest {
         val state = viewModel.uiState.value
         assertNotNull(state.coordinateError)
         // Anchor in repo should remain unchanged
-        assertEquals(-6.2088, settingsRepository.configFlow.value.anchor?.latitude ?: 0.0, 0.0001)
+        assertEquals(-6.213726, settingsRepository.configFlow.value.anchor?.latitude ?: 0.0, 0.0001)
     }
 
     @Test

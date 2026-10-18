@@ -36,8 +36,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class GeneratorUiState(
-    val centerLat: String = "-6.200000",
-    val centerLng: String = "106.816000",
+    val centerLat: String = "-6.213726",
+    val centerLng: String = "106.819897",
     val radiusMeters: String = "500",
     val count: String = "10",
     val generatedPoints: List<Coordinate> = emptyList(),

@@ -8,7 +8,11 @@ package com.dhikadityre.gpsmirage.core.model
  * @property radiusMeters The allowed selection radius distance in meters (default: 500.0m).
  */
 data class RadiusConfig(
-    val isEnabled: Boolean = false,
-    val anchor: Coordinate? = null,
+    val isEnabled: Boolean = true,
+    val anchor: Coordinate? = MAYAPADA_TOWER,
     val radiusMeters: Double = 500.0
-)
+) {
+    companion object {
+        val MAYAPADA_TOWER = Coordinate(latitude = -6.213726, longitude = 106.819897)
+    }
+}
