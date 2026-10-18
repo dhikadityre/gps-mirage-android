@@ -83,8 +83,11 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import kotlinx.coroutines.delay
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -141,10 +144,21 @@ fun MapScreen(
     viewModel: MapViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+
+    var isIslandExpanded by remember { mutableStateOf(true) }
+
+    LaunchedEffect(uiState.isMockActive) {
+        if (uiState.isMockActive) {
+            isIslandExpanded = true
+            delay(3000)
+            isIslandExpanded = false
+        } else {
+            isIslandExpanded = true
+        }
+    }
 
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -164,15 +178,12 @@ fun MapScreen(
     LaunchedEffect(uiState.event) {
         when (val event = uiState.event) {
             is MapEvent.ShowSnackbar -> {
-                scope.launch { snackbarHostState.showSnackbar(event.message) }
                 viewModel.clearEvent()
             }
             is MapEvent.MockStarted -> {
-                scope.launch { snackbarHostState.showSnackbar("Mock location started") }
                 viewModel.clearEvent()
             }
             is MapEvent.MockStopped -> {
-                scope.launch { snackbarHostState.showSnackbar("Mock location stopped") }
                 viewModel.clearEvent()
             }
             is MapEvent.NavigateToSetupGuide -> {
@@ -196,9 +207,7 @@ fun MapScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
+    Scaffold { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -268,13 +277,22 @@ fun MapScreen(
                 }
             }
 
+            val configuration = LocalConfiguration.current
+            val isCompactScreen = configuration.screenHeightDp < 640
+
             if (!uiState.isMockActive) {
-                Row(
+                Column(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .statusBarsPadding()
-                        .padding(top = 12.dp, end = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        .align(Alignment.CenterStart)
+                        .offset(
+                            y = if (isCompactScreen && uiState.selectedCoordinate != null && !uiState.isMockActive) {
+                                (-100).dp
+                            } else {
+                                (-60).dp
+                            }
+                        )
+                        .padding(start = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     SmallFloatingActionButton(
                         onClick = { viewModel.toggleQuickLocations() },
@@ -294,9 +312,6 @@ fun MapScreen(
                     }
                 }
             }
-
-            val configuration = LocalConfiguration.current
-            val isCompactScreen = configuration.screenHeightDp < 640
 
             MapFloatingControls(
                 selectionMode = uiState.selectionMode,
@@ -343,6 +358,8 @@ fun MapScreen(
                 MockActiveBanner(
                     location = uiState.activeMockLocation,
                     isLoading = uiState.isLoading,
+                    isExpanded = isIslandExpanded,
+                    onToggleExpand = { isIslandExpanded = !isIslandExpanded },
                     onOpenGoogleMaps = {
                         val activeLoc = uiState.activeMockLocation
                         if (activeLoc != null) {
@@ -678,84 +695,138 @@ private fun getAnchorMarkerDrawable(context: Context): Drawable {
 private fun MockActiveBanner(
     location: Location?,
     isLoading: Boolean,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     onOpenGoogleMaps: () -> Unit = {},
     onStop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20)),
+        modifier = modifier
+            .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
+            .then(if (isExpanded) Modifier.fillMaxWidth() else Modifier.wrapContentSize())
+            .clickable(onClick = onToggleExpand),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isExpanded) Color(0xFF1B5E20) else Color(0xFF0F2E1B)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(if (isExpanded) 16.dp else 28.dp),
+        border = if (!isExpanded) BorderStroke(1.dp, Color(0xFF4CAF50).copy(alpha = 0.5f)) else null
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "● MOCK LOCATION ACTIVE",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    letterSpacing = 0.5.sp
-                )
-                if (location != null) {
-                    Text(
-                        text = location.name,
-                        color = Color(0xFFA5D6A7),
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 1.dp)
-                    )
-                    Text(
-                        text = "%.6f, %.6f".format(location.latitude, location.longitude),
-                        color = Color(0xFF81C784),
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(8.dp))
+        if (!isExpanded) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                FilledTonalButton(
-                    onClick = onOpenGoogleMaps,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.2f),
-                        contentColor = Color.White
-                    ),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Map,
-                        contentDescription = "Buka Google Maps",
-                        modifier = Modifier.size(15.dp)
+                Box(
+                    modifier = Modifier
+                        .size(9.dp)
+                        .background(Color(0xFF4CAF50), CircleShape)
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(horizontalAlignment = Alignment.Start) {
+                    Text(
+                        text = "Active",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        letterSpacing = 0.5.sp
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Text("Maps", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Button(
-                    onClick = onStop,
-                    enabled = !isLoading,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
+                    if (location != null) {
+                        Text(
+                            text = "%.6f, %.6f".format(location.latitude, location.longitude),
+                            color = Color(0xFF81C784),
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
                         )
-                    } else {
-                        Text("STOP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Icon(
+                    imageVector = Icons.Default.ExpandMore,
+                    contentDescription = "Expand",
+                    tint = Color(0xFFA5D6A7),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(Color(0xFF4CAF50), CircleShape)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "MOCK LOCATION ACTIVE",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    if (location != null) {
+                        Text(
+                            text = location.name,
+                            color = Color(0xFFA5D6A7),
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 1.dp)
+                        )
+                        Text(
+                            text = "%.6f, %.6f".format(location.latitude, location.longitude),
+                            color = Color(0xFF81C784),
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = onOpenGoogleMaps,
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.2f),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Map,
+                            contentDescription = "Buka Google Maps",
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Maps", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = onStop,
+                        enabled = !isLoading,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("STOP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
                     }
                 }
             }
