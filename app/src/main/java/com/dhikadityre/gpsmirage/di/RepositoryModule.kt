@@ -47,4 +47,10 @@ abstract class RepositoryModule {
     abstract fun bindDefaultProfileRepository(
         impl: com.dhikadityre.gpsmirage.data.repository.DefaultProfileRepositoryImpl
     ): com.dhikadityre.gpsmirage.domain.preset.DefaultProfileRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReminderAlarmRepository(
+        impl: com.dhikadityre.gpsmirage.data.repository.ReminderAlarmRepositoryImpl
+    ): com.dhikadityre.gpsmirage.domain.alarm.ReminderAlarmRepository
 }

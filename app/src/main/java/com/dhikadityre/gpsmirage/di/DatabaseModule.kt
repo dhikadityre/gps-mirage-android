@@ -42,6 +42,25 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+        override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `reminder_alarms` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `label` TEXT NOT NULL,
+                    `hour` INTEGER NOT NULL,
+                    `minute` INTEGER NOT NULL,
+                    `days_of_week` INTEGER NOT NULL,
+                    `is_enabled` INTEGER NOT NULL,
+                    `created_at` INTEGER NOT NULL,
+                    `updated_at` INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): GpsMirageDatabase {
@@ -50,7 +69,7 @@ object DatabaseModule {
             GpsMirageDatabase::class.java,
             GpsMirageDatabase.DATABASE_NAME
         )
-            .addMigrations(MIGRATION_2_3)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
@@ -68,4 +87,8 @@ object DatabaseModule {
     @Provides
     fun provideDefaultProfileDao(db: GpsMirageDatabase): com.dhikadityre.gpsmirage.core.database.dao.DefaultProfileDao =
         db.defaultProfileDao()
+
+    @Provides
+    fun provideReminderAlarmDao(db: GpsMirageDatabase): com.dhikadityre.gpsmirage.core.database.dao.ReminderAlarmDao =
+        db.reminderAlarmDao()
 }
