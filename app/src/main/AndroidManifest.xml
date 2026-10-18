@@ -62,6 +62,8 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.dhikadityre.gpsmirage.ACTION_REMINDER_ALARM" />
+                <action android:name="com.dhikadityre.gpsmirage.ACTION_SNOOZE_ALARM" />
+                <action android:name="com.dhikadityre.gpsmirage.ACTION_TEST_ALARM" />
             </intent-filter>
         </receiver>
 

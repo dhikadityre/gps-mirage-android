@@ -35,7 +35,12 @@ open class ReminderAlarmManager @Inject constructor(
         val intent = Intent(ctx, AlarmReceiver::class.java).apply {
             action = AlarmReceiver.ACTION_REMINDER_ALARM
             putExtra(AlarmReceiver.EXTRA_ALARM_ID, alarm.id)
+            putExtra(AlarmReceiver.EXTRA_ALARM_TITLE, alarm.title)
             putExtra(AlarmReceiver.EXTRA_ALARM_LABEL, alarm.label)
+            putExtra(AlarmReceiver.EXTRA_ALARM_SOUND_URI, alarm.soundUri)
+            putExtra(AlarmReceiver.EXTRA_ALARM_IS_VIBRATE, alarm.isVibrate)
+            putExtra(AlarmReceiver.EXTRA_ALARM_SNOOZE_MINUTES, alarm.snoozeMinutes)
+            putExtra(AlarmReceiver.EXTRA_ALARM_IS_DELETE_AFTER_RINGING, alarm.isDeleteAfterRinging)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -106,6 +111,54 @@ open class ReminderAlarmManager @Inject constructor(
             alarmManager?.canScheduleExactAlarms() ?: false
         } else {
             true
+        }
+    }
+
+    open fun scheduleSnoozeAlarm(
+        alarmId: Long,
+        title: String,
+        label: String,
+        soundUri: String?,
+        isVibrate: Boolean,
+        snoozeMinutes: Int,
+        isDeleteAfterRinging: Boolean = false
+    ) {
+        val ctx = context ?: return
+        if (alarmManager == null || snoozeMinutes <= 0) return
+
+        val triggerMillis = System.currentTimeMillis() + (snoozeMinutes * 60 * 1000L)
+        val intent = Intent(ctx, AlarmReceiver::class.java).apply {
+            action = AlarmReceiver.ACTION_REMINDER_ALARM
+            putExtra(AlarmReceiver.EXTRA_ALARM_ID, alarmId)
+            putExtra(AlarmReceiver.EXTRA_ALARM_TITLE, title)
+            putExtra(AlarmReceiver.EXTRA_ALARM_LABEL, label)
+            putExtra(AlarmReceiver.EXTRA_ALARM_SOUND_URI, soundUri)
+            putExtra(AlarmReceiver.EXTRA_ALARM_IS_VIBRATE, isVibrate)
+            putExtra(AlarmReceiver.EXTRA_ALARM_SNOOZE_MINUTES, snoozeMinutes)
+            putExtra(AlarmReceiver.EXTRA_ALARM_IS_DELETE_AFTER_RINGING, isDeleteAfterRinging)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            ctx,
+            if (alarmId > 0) (alarmId + 99999).toInt() else 99999,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        try {
+            AlarmManagerCompat.setExactAndAllowWhileIdle(
+                alarmManager,
+                AlarmManager.RTC_WAKEUP,
+                triggerMillis,
+                pendingIntent
+            )
+        } catch (_: SecurityException) {
+            AlarmManagerCompat.setAndAllowWhileIdle(
+                alarmManager,
+                AlarmManager.RTC_WAKEUP,
+                triggerMillis,
+                pendingIntent
+            )
         }
     }
 }

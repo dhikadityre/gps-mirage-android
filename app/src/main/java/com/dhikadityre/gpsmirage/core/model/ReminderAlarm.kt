@@ -4,11 +4,16 @@ import java.util.Locale
 
 data class ReminderAlarm(
     val id: Long = 0L,
-    val label: String,
+    val title: String = "",
+    val label: String = "",
     val hour: Int,
     val minute: Int,
     val daysOfWeek: Set<Int> = emptySet(), // 1 = Senin, ..., 7 = Minggu (ISO-8601)
     val isEnabled: Boolean = true,
+    val isDeleteAfterRinging: Boolean = false,
+    val soundUri: String? = null, // null/empty = default, "silent" = silent, or custom content:// URI
+    val snoozeMinutes: Int = 5, // 0 = disabled, 5, 10, 15
+    val isVibrate: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 ) {

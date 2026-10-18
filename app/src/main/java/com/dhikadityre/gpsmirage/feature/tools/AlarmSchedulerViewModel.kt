@@ -5,7 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.dhikadityre.gpsmirage.core.model.ReminderAlarm
 import com.dhikadityre.gpsmirage.data.alarm.ReminderAlarmManager
 import com.dhikadityre.gpsmirage.domain.alarm.ReminderAlarmRepository
+import android.content.Context
+import android.content.Intent
+import com.dhikadityre.gpsmirage.receiver.AlarmReceiver
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AlarmSchedulerViewModel @Inject constructor(
     private val repository: ReminderAlarmRepository,
-    private val alarmManager: ReminderAlarmManager
+    private val alarmManager: ReminderAlarmManager,
+    @ApplicationContext private val context: Context? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AlarmSchedulerUiState())
@@ -78,10 +83,15 @@ class AlarmSchedulerViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 dialogAlarm = ReminderAlarm(
+                    title = "",
                     label = "",
                     hour = 8,
                     minute = 0,
-                    daysOfWeek = setOf(1, 2, 3, 4, 5) // Default Senin - Jumat
+                    daysOfWeek = setOf(1, 2, 3, 4, 5), // Default Senin - Jumat
+                    isDeleteAfterRinging = false,
+                    soundUri = null,
+                    snoozeMinutes = 5,
+                    isVibrate = true
                 ),
                 isDialogOpen = true
             )
@@ -106,16 +116,37 @@ class AlarmSchedulerViewModel @Inject constructor(
         }
     }
 
-    fun saveAlarm(label: String, hour: Int, minute: Int, daysOfWeek: Set<Int>) {
+    fun saveAlarm(
+        title: String = "",
+        label: String = "",
+        hour: Int,
+        minute: Int,
+        daysOfWeek: Set<Int>,
+        isDeleteAfterRinging: Boolean = false,
+        soundUri: String? = null,
+        snoozeMinutes: Int = 5,
+        isVibrate: Boolean = true
+    ) {
         val currentDialogAlarm = _uiState.value.dialogAlarm ?: return
         viewModelScope.launch {
-            val trimmedLabel = label.trim().ifEmpty { "Pengingat GPS Mirage" }
+            val trimmedTitle = title.trim()
+            val trimmedLabel = label.trim()
+            val finalLabel = if (trimmedTitle.isEmpty() && trimmedLabel.isEmpty()) {
+                "Pengingat GPS Mirage"
+            } else {
+                trimmedLabel
+            }
             val alarmToSave = currentDialogAlarm.copy(
-                label = trimmedLabel,
+                title = trimmedTitle,
+                label = finalLabel,
                 hour = hour.coerceIn(0, 23),
                 minute = minute.coerceIn(0, 59),
                 daysOfWeek = daysOfWeek,
-                isEnabled = true
+                isEnabled = true,
+                isDeleteAfterRinging = isDeleteAfterRinging,
+                soundUri = soundUri,
+                snoozeMinutes = snoozeMinutes,
+                isVibrate = isVibrate
             )
 
             repository.saveAlarm(alarmToSave)
@@ -126,6 +157,41 @@ class AlarmSchedulerViewModel @Inject constructor(
                     userMessage = "Jadwal alarm berhasil disimpan"
                 )
             }
+        }
+    }
+
+    fun saveAlarm(label: String, hour: Int, minute: Int, daysOfWeek: Set<Int>) {
+        saveAlarm(
+            title = "",
+            label = label,
+            hour = hour,
+            minute = minute,
+            daysOfWeek = daysOfWeek
+        )
+    }
+
+    fun testAlarm(
+        title: String,
+        label: String,
+        soundUri: String?,
+        isVibrate: Boolean,
+        snoozeMinutes: Int
+    ) {
+        val ctx = context
+        if (ctx != null) {
+            val intent = Intent(ctx, AlarmReceiver::class.java).apply {
+                action = AlarmReceiver.ACTION_TEST_ALARM
+                putExtra(AlarmReceiver.EXTRA_ALARM_ID, -1L)
+                putExtra(AlarmReceiver.EXTRA_ALARM_TITLE, title.trim())
+                putExtra(AlarmReceiver.EXTRA_ALARM_LABEL, label.trim().ifEmpty { "Pengingat GPS Mirage" })
+                putExtra(AlarmReceiver.EXTRA_ALARM_SOUND_URI, soundUri)
+                putExtra(AlarmReceiver.EXTRA_ALARM_IS_VIBRATE, isVibrate)
+                putExtra(AlarmReceiver.EXTRA_ALARM_SNOOZE_MINUTES, snoozeMinutes)
+            }
+            ctx.sendBroadcast(intent)
+        }
+        _uiState.update {
+            it.copy(userMessage = "Notifikasi pengujian berhasil dikirim!")
         }
     }
 

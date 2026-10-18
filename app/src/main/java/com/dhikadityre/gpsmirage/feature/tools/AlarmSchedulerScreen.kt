@@ -1,9 +1,11 @@
 package com.dhikadityre.gpsmirage.feature.tools
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -21,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.Delete
@@ -32,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -275,8 +279,21 @@ fun AlarmSchedulerScreen(
         AlarmEditDialog(
             initialAlarm = uiState.dialogAlarm!!,
             onDismiss = { viewModel.dismissDialog() },
-            onSave = { label, hour, minute, days ->
-                viewModel.saveAlarm(label, hour, minute, days)
+            onTest = { title, label, soundUri, isVibrate, snoozeMinutes ->
+                viewModel.testAlarm(title, label, soundUri, isVibrate, snoozeMinutes)
+            },
+            onSave = { title, label, hour, minute, days, isDeleteAfterRinging, soundUri, snoozeMinutes, isVibrate ->
+                viewModel.saveAlarm(
+                    title = title,
+                    label = label,
+                    hour = hour,
+                    minute = minute,
+                    daysOfWeek = days,
+                    isDeleteAfterRinging = isDeleteAfterRinging,
+                    soundUri = soundUri,
+                    snoozeMinutes = snoozeMinutes,
+                    isVibrate = isVibrate
+                )
             }
         )
     }
@@ -292,10 +309,11 @@ fun AlarmSchedulerScreen(
                 )
             },
             text = {
+                val alarmName = alarm.title.ifBlank { alarm.label.ifBlank { "Alarm" } }
                 Text(
                     text = stringResource(
                         R.string.alarm_delete_confirm,
-                        alarm.label,
+                        alarmName,
                         alarm.formattedTime
                     ),
                     style = MaterialTheme.typography.bodyMedium
@@ -362,8 +380,9 @@ private fun AlarmCard(
                         }
                     )
                     Spacer(Modifier.height(4.dp))
+                    val primaryTitle = alarm.title.ifBlank { alarm.label.ifBlank { "Pengingat GPS Mirage" } }
                     Text(
-                        text = alarm.label,
+                        text = primaryTitle,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = if (alarm.isEnabled) {
@@ -374,6 +393,19 @@ private fun AlarmCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (alarm.title.isNotBlank() && alarm.label.isNotBlank()) {
+                        Text(
+                            text = alarm.label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (alarm.isEnabled) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 Switch(
@@ -393,25 +425,65 @@ private fun AlarmCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (alarm.isEnabled) {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    Text(
-                        text = alarm.localizedRepeatSummary(),
-                        style = MaterialTheme.typography.labelSmall,
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
                         color = if (alarm.isEnabled) {
-                            MaterialTheme.colorScheme.onSecondaryContainer
+                            MaterialTheme.colorScheme.secondaryContainer
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontWeight = FontWeight.Medium
-                    )
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    ) {
+                        Text(
+                            text = alarm.localizedRepeatSummary(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (alarm.isEnabled) {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    if (alarm.isDeleteAfterRinging && alarm.daysOfWeek.isEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                        ) {
+                            Text(
+                                text = "1x Hapus",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+
+                    if (alarm.soundUri == "silent") {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.VolumeOff,
+                            contentDescription = "Mute",
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    if (alarm.isVibrate) {
+                        Icon(
+                            imageVector = Icons.Default.Vibration,
+                            contentDescription = "Vibrate",
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -449,10 +521,59 @@ private fun AlarmCard(
 private fun AlarmEditDialog(
     initialAlarm: ReminderAlarm,
     onDismiss: () -> Unit,
-    onSave: (label: String, hour: Int, minute: Int, days: Set<Int>) -> Unit
+    onTest: (title: String, label: String, soundUri: String?, isVibrate: Boolean, snoozeMinutes: Int) -> Unit,
+    onSave: (
+        title: String,
+        label: String,
+        hour: Int,
+        minute: Int,
+        days: Set<Int>,
+        isDeleteAfterRinging: Boolean,
+        soundUri: String?,
+        snoozeMinutes: Int,
+        isVibrate: Boolean
+    ) -> Unit
 ) {
+    var title by remember { mutableStateOf(initialAlarm.title) }
     var label by remember { mutableStateOf(initialAlarm.label) }
     var selectedDays by remember { mutableStateOf(initialAlarm.daysOfWeek) }
+    var isDeleteAfterRinging by remember { mutableStateOf(initialAlarm.isDeleteAfterRinging) }
+    var soundUri by remember { mutableStateOf(initialAlarm.soundUri) }
+    var snoozeMinutes by remember { mutableIntStateOf(initialAlarm.snoozeMinutes) }
+    var isVibrate by remember { mutableStateOf(initialAlarm.isVibrate) }
+    var showSoundPicker by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val ringtonePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val pickedUri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            }
+            soundUri = pickedUri?.toString()
+        }
+    }
+
+    val currentSoundLabel = remember(soundUri) {
+        when {
+            soundUri == "silent" -> context.getString(R.string.alarm_sound_silent)
+            soundUri == "default_notif" -> context.getString(R.string.alarm_sound_default_notif)
+            soundUri.isNullOrEmpty() -> context.getString(R.string.alarm_sound_default_alarm)
+            else -> {
+                try {
+                    val ringtone = RingtoneManager.getRingtone(context, Uri.parse(soundUri))
+                    ringtone?.getTitle(context) ?: context.getString(R.string.alarm_sound_custom)
+                } catch (_: Exception) {
+                    context.getString(R.string.alarm_sound_custom)
+                }
+            }
+        }
+    }
+
     val timePickerState = rememberTimePickerState(
         initialHour = initialAlarm.hour,
         initialMinute = initialAlarm.minute,
@@ -509,6 +630,17 @@ private fun AlarmEditDialog(
                     )
                 }
 
+                // Title Input
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.alarm_title_field)) },
+                    placeholder = { Text(stringResource(R.string.alarm_title_placeholder)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
                 // Label Input
                 OutlinedTextField(
                     value = label,
@@ -520,7 +652,7 @@ private fun AlarmEditDialog(
                     singleLine = true
                 )
 
-                // Quick Presets
+                // Quick Presets in 2x2 Grid (eliminates vertical spacer bug on small screens)
                 Text(
                     text = stringResource(R.string.alarm_repeat_section),
                     style = MaterialTheme.typography.labelSmall,
@@ -529,30 +661,76 @@ private fun AlarmEditDialog(
                     letterSpacing = 0.5.sp
                 )
 
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FilterChip(
-                        selected = selectedDays == setOf(1, 2, 3, 4, 5),
-                        onClick = { selectedDays = setOf(1, 2, 3, 4, 5) },
-                        label = { Text(stringResource(R.string.alarm_repeat_weekdays), fontSize = 11.sp) }
-                    )
-                    FilterChip(
-                        selected = selectedDays == setOf(6, 7),
-                        onClick = { selectedDays = setOf(6, 7) },
-                        label = { Text(stringResource(R.string.alarm_repeat_weekends), fontSize = 11.sp) }
-                    )
-                    FilterChip(
-                        selected = selectedDays.size == 7,
-                        onClick = { selectedDays = setOf(1, 2, 3, 4, 5, 6, 7) },
-                        label = { Text(stringResource(R.string.alarm_repeat_everyday), fontSize = 11.sp) }
-                    )
-                    FilterChip(
-                        selected = selectedDays.isEmpty(),
-                        onClick = { selectedDays = emptySet() },
-                        label = { Text(stringResource(R.string.alarm_repeat_once), fontSize = 11.sp) }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            modifier = Modifier.weight(1f),
+                            selected = selectedDays == setOf(1, 2, 3, 4, 5),
+                            onClick = { selectedDays = setOf(1, 2, 3, 4, 5) },
+                            label = {
+                                Text(
+                                    stringResource(R.string.alarm_repeat_weekdays),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        )
+                        FilterChip(
+                            modifier = Modifier.weight(1f),
+                            selected = selectedDays == setOf(6, 7),
+                            onClick = { selectedDays = setOf(6, 7) },
+                            label = {
+                                Text(
+                                    stringResource(R.string.alarm_repeat_weekends),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            modifier = Modifier.weight(1f),
+                            selected = selectedDays.size == 7,
+                            onClick = { selectedDays = setOf(1, 2, 3, 4, 5, 6, 7) },
+                            label = {
+                                Text(
+                                    stringResource(R.string.alarm_repeat_everyday),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        )
+                        FilterChip(
+                            modifier = Modifier.weight(1f),
+                            selected = selectedDays.isEmpty(),
+                            onClick = { selectedDays = emptySet() },
+                            label = {
+                                Text(
+                                    stringResource(R.string.alarm_repeat_once),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        )
+                    }
                 }
 
                 // Days Selection Chips (Mon to Sun)
@@ -609,6 +787,183 @@ private fun AlarmEditDialog(
                     }
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Delete after ringing (only applies when alarm is once)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(enabled = selectedDays.isEmpty()) {
+                            isDeleteAfterRinging = !isDeleteAfterRinging
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.alarm_delete_after_ringing),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (selectedDays.isEmpty()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
+                        Text(
+                            text = stringResource(R.string.alarm_delete_after_ringing_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (selectedDays.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Switch(
+                        checked = isDeleteAfterRinging && selectedDays.isEmpty(),
+                        onCheckedChange = { isDeleteAfterRinging = it },
+                        enabled = selectedDays.isEmpty()
+                    )
+                }
+
+                // Alarm Sound Selection
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.alarm_sound_section),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showSoundPicker = true },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = if (soundUri == "silent") Icons.AutoMirrored.Filled.VolumeOff else Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = currentSoundLabel,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Snooze Duration
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.alarm_snooze_section),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val snoozeOptions = listOf(
+                            0 to stringResource(R.string.alarm_snooze_off),
+                            5 to stringResource(R.string.alarm_snooze_5min),
+                            10 to stringResource(R.string.alarm_snooze_10min),
+                            15 to stringResource(R.string.alarm_snooze_15min)
+                        )
+                        snoozeOptions.forEach { (mins, name) ->
+                            FilterChip(
+                                modifier = Modifier.weight(1f),
+                                selected = snoozeMinutes == mins,
+                                onClick = { snoozeMinutes = mins },
+                                label = {
+                                    Text(
+                                        name,
+                                        fontSize = 11.sp,
+                                        maxLines = 1,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Vibrate Toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { isVibrate = !isVibrate }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.alarm_vibrate_title),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = stringResource(R.string.alarm_vibrate_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Switch(
+                        checked = isVibrate,
+                        onCheckedChange = { isVibrate = it }
+                    )
+                }
+
+                // Test Button
+                OutlinedButton(
+                    onClick = {
+                        onTest(title, label, soundUri, isVibrate, snoozeMinutes)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.alarm_test_button))
+                }
+
                 Spacer(Modifier.height(8.dp))
 
                 // Actions
@@ -624,10 +979,15 @@ private fun AlarmEditDialog(
                     Button(
                         onClick = {
                             onSave(
+                                title,
                                 label,
                                 timePickerState.hour,
                                 timePickerState.minute,
-                                selectedDays
+                                selectedDays,
+                                isDeleteAfterRinging,
+                                soundUri,
+                                snoozeMinutes,
+                                isVibrate
                             )
                         },
                         shape = RoundedCornerShape(12.dp)
@@ -637,6 +997,123 @@ private fun AlarmEditDialog(
                 }
             }
         }
+    }
+
+    // Sound Selection Dialog
+    if (showSoundPicker) {
+        AlertDialog(
+            onDismissRequest = { showSoundPicker = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.alarm_sound_picker_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Option 1: Default Alarm
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                soundUri = null
+                                showSoundPicker = false
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (soundUri.isNullOrEmpty()) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
+                    ) {
+                        Text(
+                            text = stringResource(R.string.alarm_sound_default_alarm),
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (soundUri.isNullOrEmpty()) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+
+                    // Option 2: Default Notifikasi
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                soundUri = "default_notif"
+                                showSoundPicker = false
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (soundUri == "default_notif") MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
+                    ) {
+                        Text(
+                            text = stringResource(R.string.alarm_sound_default_notif),
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (soundUri == "default_notif") FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+
+                    // Option 3: Senyap / Mute
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                soundUri = "silent"
+                                showSoundPicker = false
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (soundUri == "silent") MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
+                    ) {
+                        Text(
+                            text = stringResource(R.string.alarm_sound_silent),
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (soundUri == "silent") FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+
+                    // Option 4: Custom System Picker
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                showSoundPicker = false
+                                val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM or RingtoneManager.TYPE_NOTIFICATION)
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, context.getString(R.string.alarm_sound_picker_title))
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                    if (!soundUri.isNullOrEmpty() && soundUri != "silent" && soundUri != "default_notif") {
+                                        putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(soundUri))
+                                    }
+                                }
+                                ringtonePickerLauncher.launch(intent)
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (!soundUri.isNullOrEmpty() && soundUri != "silent" && soundUri != "default_notif") {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.alarm_sound_custom),
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (!soundUri.isNullOrEmpty() && soundUri != "silent" && soundUri != "default_notif") FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSoundPicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 }
 

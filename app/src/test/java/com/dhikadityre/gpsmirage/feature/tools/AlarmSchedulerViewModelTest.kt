@@ -105,4 +105,46 @@ class AlarmSchedulerViewModelTest {
         assertNull(viewModel.uiState.value.alarmToDelete)
         assertEquals("Alarm berhasil dihapus", viewModel.uiState.value.userMessage)
     }
+
+    @Test
+    fun `saveAlarm with full parameters preserves all new options`() = runTest(testDispatcher) {
+        viewModel.openCreateDialog()
+        viewModel.saveAlarm(
+            title = "Kantor Pusat",
+            label = "Jangan lupa tap lokasi",
+            hour = 7,
+            minute = 45,
+            daysOfWeek = emptySet(),
+            isDeleteAfterRinging = true,
+            soundUri = "content://media/internal/audio/media/1",
+            snoozeMinutes = 10,
+            isVibrate = false
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.alarms.size)
+        val alarm = state.alarms[0]
+        assertEquals("Kantor Pusat", alarm.title)
+        assertEquals("Jangan lupa tap lokasi", alarm.label)
+        assertEquals(7, alarm.hour)
+        assertEquals(45, alarm.minute)
+        assertTrue(alarm.daysOfWeek.isEmpty())
+        assertTrue(alarm.isDeleteAfterRinging)
+        assertEquals("content://media/internal/audio/media/1", alarm.soundUri)
+        assertEquals(10, alarm.snoozeMinutes)
+        assertFalse(alarm.isVibrate)
+    }
+
+    @Test
+    fun `testAlarm triggers userMessage confirmation`() = runTest(testDispatcher) {
+        viewModel.testAlarm(
+            title = "Test Judul",
+            label = "Test Label",
+            soundUri = null,
+            isVibrate = true,
+            snoozeMinutes = 5
+        )
+        assertEquals("Notifikasi pengujian berhasil dikirim!", viewModel.uiState.value.userMessage)
+    }
 }

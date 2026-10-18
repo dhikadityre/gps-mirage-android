@@ -39,13 +39,13 @@ enum class MapLayerStyle(val id: String, val titleRes: Int, val descriptionRes: 
  * Supported in-app languages.
  */
 enum class AppLanguage(val code: String, val displayNameRes: Int) {
-    INDONESIAN(
-        code = "id",
-        displayNameRes = R.string.language_indonesian
-    ),
     ENGLISH(
         code = "en",
         displayNameRes = R.string.language_english
+    ),
+    INDONESIAN(
+        code = "id",
+        displayNameRes = R.string.language_indonesian
     );
 
     companion object {
