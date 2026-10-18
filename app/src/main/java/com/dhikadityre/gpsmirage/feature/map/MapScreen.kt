@@ -40,6 +40,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Edit
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Warning
@@ -133,6 +135,7 @@ fun MapScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
 
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -166,6 +169,10 @@ fun MapScreen(
             is MapEvent.NavigateToSetupGuide -> {
                 // Handled below via showSetupDialog
             }
+            is MapEvent.AnimateCamera -> {
+                mapViewRef?.controller?.animateTo(GeoPoint(event.coordinate.latitude, event.coordinate.longitude))
+                viewModel.clearEvent()
+            }
             null -> Unit
         }
     }
@@ -179,8 +186,6 @@ fun MapScreen(
             viewModel.clearEvent()
         }
     }
-
-    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -243,6 +248,7 @@ fun MapScreen(
             MapFloatingControls(
                 selectionMode = uiState.selectionMode,
                 isPositionLocked = uiState.isPositionLocked,
+                isRewindEnabled = uiState.isRewindEnabled,
                 isCompact = isCompactScreen,
                 onToggleSelectionMode = {
                     val nextMode = if (uiState.selectionMode == MapSelectionMode.CENTER_PIN) {
@@ -254,6 +260,17 @@ fun MapScreen(
                 },
                 onTogglePositionLock = {
                     viewModel.togglePositionLock()
+                },
+                onRecenterToAnchor = {
+                    val anchor = uiState.radiusConfig.anchor ?: RadiusConfig.MAYAPADA_TOWER
+                    mapViewRef?.controller?.setCenter(GeoPoint(anchor.latitude, anchor.longitude))
+                    if (uiState.isPositionLocked) {
+                        viewModel.togglePositionLock()
+                    }
+                    viewModel.onMapCenterMoved(anchor.latitude, anchor.longitude)
+                },
+                onRewind = {
+                    viewModel.onRewindClick()
                 },
                 onZoomIn = { mapViewRef?.controller?.zoomIn() },
                 onZoomOut = { mapViewRef?.controller?.zoomOut() },
@@ -292,6 +309,7 @@ fun MapScreen(
                     distanceToAnchorMeters = uiState.distanceToAnchorMeters,
                     isWithinRadius = uiState.isWithinRadius,
                     isPositionLocked = uiState.isPositionLocked,
+                    onTogglePositionLock = { viewModel.togglePositionLock() },
                     onSave = { name ->
                         viewModel.onSaveLocation(name)
                         onSaveLocation(
@@ -413,10 +431,35 @@ private fun OsmMapView(
                 setTileSource(TileSourceFactory.MAPNIK)
                 setBuiltInZoomControls(false)
                 setMultiTouchControls(true)
-                controller.setZoom(15.0)
 
                 val initialAnchor = radiusConfig.anchor ?: RadiusConfig.MAYAPADA_TOWER
-                controller.setCenter(GeoPoint(initialAnchor.latitude, initialAnchor.longitude))
+                val initialGeoPoint = GeoPoint(initialAnchor.latitude, initialAnchor.longitude)
+                setExpectedCenter(initialGeoPoint)
+
+                addOnLayoutChangeListener(object : android.view.View.OnLayoutChangeListener {
+                    override fun onLayoutChange(
+                        v: android.view.View?,
+                        left: Int,
+                        top: Int,
+                        right: Int,
+                        bottom: Int,
+                        oldLeft: Int,
+                        oldTop: Int,
+                        oldRight: Int,
+                        oldBottom: Int
+                    ) {
+                        if (right - left > 0 && bottom - top > 0) {
+                            removeOnLayoutChangeListener(this)
+                            controller.setZoom(15.0)
+                            controller.setCenter(initialGeoPoint)
+                        }
+                    }
+                })
+
+                post {
+                    controller.setZoom(15.0)
+                    controller.setCenter(initialGeoPoint)
+                }
 
                 setOnTouchListener { _, event ->
                     if (event.action == android.view.MotionEvent.ACTION_DOWN || event.action == android.view.MotionEvent.ACTION_MOVE) {
@@ -429,7 +472,9 @@ private fun OsmMapView(
                     override fun onScroll(event: ScrollEvent?): Boolean {
                         if (hasUserInteracted) {
                             val center = mapCenter
-                            onMapCenterMoved(center.latitude, center.longitude)
+                            if (center != null && (Math.abs(center.latitude) > 0.00001 || Math.abs(center.longitude) > 0.00001)) {
+                                onMapCenterMoved(center.latitude, center.longitude)
+                            }
                         }
                         return true
                     }
@@ -437,7 +482,9 @@ private fun OsmMapView(
                     override fun onZoom(event: ZoomEvent?): Boolean {
                         if (hasUserInteracted) {
                             val center = mapCenter
-                            onMapCenterMoved(center.latitude, center.longitude)
+                            if (center != null && (Math.abs(center.latitude) > 0.00001 || Math.abs(center.longitude) > 0.00001)) {
+                                onMapCenterMoved(center.latitude, center.longitude)
+                            }
                         }
                         return true
                     }
@@ -491,9 +538,16 @@ private fun OsmMapView(
                 }
                 mapView.overlays.add(anchorMarker)
 
-                if (selectedCoordinate == null && lastAnimatedCoord == null) {
-                    mapView.controller.setCenter(anchorGeoPoint)
-                    lastAnimatedCoord = radiusConfig.anchor
+                if (selectedCoordinate == null && lastAnimatedCoord != radiusConfig.anchor) {
+                    if (mapView.width > 0 && mapView.height > 0) {
+                        mapView.controller.setCenter(anchorGeoPoint)
+                        lastAnimatedCoord = radiusConfig.anchor
+                    } else {
+                        mapView.post {
+                            mapView.controller.setCenter(anchorGeoPoint)
+                            lastAnimatedCoord = radiusConfig.anchor
+                        }
+                    }
                 }
             }
 
@@ -623,6 +677,7 @@ private fun SelectedCoordinateCard(
     distanceToAnchorMeters: Double?,
     isWithinRadius: Boolean,
     isPositionLocked: Boolean = false,
+    onTogglePositionLock: () -> Unit = {},
     onSave: (String) -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier
@@ -752,7 +807,9 @@ private fun SelectedCoordinateCard(
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onTogglePositionLock() }
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -773,9 +830,10 @@ private fun SelectedCoordinateCard(
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
-                            text = "Peta bebas digeser",
+                            text = "Ketuk untuk buka kunci",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
@@ -1141,9 +1199,12 @@ private fun MockNotConfiguredDialog(
 private fun MapFloatingControls(
     selectionMode: MapSelectionMode,
     isPositionLocked: Boolean,
+    isRewindEnabled: Boolean,
     isCompact: Boolean = false,
     onToggleSelectionMode: () -> Unit,
     onTogglePositionLock: () -> Unit,
+    onRecenterToAnchor: () -> Unit,
+    onRewind: () -> Unit,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     modifier: Modifier = Modifier
@@ -1194,6 +1255,35 @@ private fun MapFloatingControls(
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     }
+                )
+            }
+
+            // Rewind Map Position Button
+            IconButton(
+                onClick = onRewind,
+                enabled = isRewindEnabled,
+                modifier = Modifier.size(buttonSize)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = if (isRewindEnabled) "Kembalikan Posisi (Rewind)" else "Rewind Tidak Tersedia",
+                    tint = if (isRewindEnabled) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    }
+                )
+            }
+
+            // Recenter to Anchor Button
+            IconButton(
+                onClick = onRecenterToAnchor,
+                modifier = Modifier.size(buttonSize)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MyLocation,
+                    contentDescription = "Pusatkan ke Titik Acuan",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
 

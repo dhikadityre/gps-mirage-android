@@ -34,6 +34,8 @@ import com.dhikadityre.gpsmirage.core.geo.GeoEngineImpl
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 
+import com.dhikadityre.gpsmirage.domain.location.RewindCoordinator
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class MapViewModelTest {
 
@@ -139,7 +141,8 @@ class MapViewModelTest {
     }
 
     private fun createViewModel(
-        reverseGeocoder: ReverseGeocoder = fakeReverseGeocoder
+        reverseGeocoder: ReverseGeocoder = fakeReverseGeocoder,
+        rewindCoordinator: RewindCoordinator = RewindCoordinator()
     ): MapViewModel {
         return MapViewModel(
             locationRepository = fakeLocationRepository,
@@ -147,35 +150,52 @@ class MapViewModelTest {
             historyRepository = fakeHistoryRepository,
             settingsRepository = fakeSettingsRepository,
             geoEngine = geoEngine,
-            reverseGeocoder = reverseGeocoder
+            reverseGeocoder = reverseGeocoder,
+            rewindCoordinator = rewindCoordinator
         )
     }
 
     @Test
-    fun `initial state has null selectedCoordinate and observes Mayapada Tower anchor`() = runTest(testDispatcher) {
+    fun `initial state has Mayapada Tower selected and observes Mayapada Tower anchor`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertNull("Selected coordinate must be null on initial state", state.selectedCoordinate)
-        assertNull("Distance to anchor must be null on initial state", state.distanceToAnchorMeters)
+        assertEquals("Selected coordinate must be Mayapada Tower on initial state", RadiusConfig.MAYAPADA_TOWER, state.selectedCoordinate)
+        assertEquals(0.0, state.distanceToAnchorMeters ?: -1.0, 0.001)
+        assertTrue(state.isWithinRadius)
         assertEquals(RadiusConfig.MAYAPADA_TOWER, state.radiusConfig.anchor)
         assertTrue(state.radiusConfig.isEnabled)
+        assertEquals("Jl. Sudirman No. 10", state.resolvedShortAddress)
     }
 
     @Test
-    fun `initial centering at Mayapada Tower does not prematurely select anchor coordinate`() = runTest(testDispatcher) {
+    fun `camera centering at Mayapada Tower retains Mayapada Tower coordinate selection`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Simulate initial camera centering scroll event to Mayapada Tower
         val anchor = RadiusConfig.MAYAPADA_TOWER
         viewModel.onMapCenterMoved(anchor.latitude, anchor.longitude)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertNull("Initial centering event at anchor must be guarded and remain null", state.selectedCoordinate)
-        assertNull(state.distanceToAnchorMeters)
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, state.selectedCoordinate)
+        assertEquals(0.0, state.distanceToAnchorMeters ?: -1.0, 0.001)
+        assertTrue(state.isWithinRadius)
+    }
+
+    @Test
+    fun `onMapCenterMoved with uninitialized 0,0 coordinate is ignored and retains existing coordinate`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onMapCenterMoved(0.0, 0.0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("0,0 coordinates must be ignored and state retains Mayapada", RadiusConfig.MAYAPADA_TOWER, state.selectedCoordinate)
+        assertEquals(0.0, state.distanceToAnchorMeters ?: -1.0, 0.001)
+        assertTrue("isWithinRadius must remain default true", state.isWithinRadius)
     }
 
     @Test
@@ -224,20 +244,20 @@ class MapViewModelTest {
     }
 
     @Test
-    fun `initialState_selectedCoordinateRemainsNullUntilUserInteraction`() = runTest(testDispatcher) {
+    fun `initialState_selectedCoordinateDefaultsToMayapadaTowerAndReadyForMock`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertNull(state.selectedCoordinate)
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, state.selectedCoordinate)
         assertFalse(state.isMockActive)
         assertEquals(0, mockLocationManager.startCallCount)
 
-        // Attempting to start mock on unselected state does nothing
+        // Starting mock on initial Mayapada state succeeds immediately
         viewModel.onStartMock()
         advanceUntilIdle()
-        assertEquals(0, mockLocationManager.startCallCount)
-        assertFalse(viewModel.uiState.value.isMockActive)
+        assertEquals(1, mockLocationManager.startCallCount)
+        assertTrue(viewModel.uiState.value.isMockActive)
     }
 
     @Test
@@ -569,17 +589,20 @@ class MapViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
+        // 1 initial geocoding call performed for Mayapada Tower
+        assertEquals(1, fakeReverseGeocoder.callsCount)
+
         viewModel.onMapCenterMoved(-6.1001, 106.8001)
         viewModel.onMapCenterMoved(-6.1002, 106.8002)
         viewModel.onMapCenterMoved(-6.1003, 106.8003)
 
-        // Before debounce timer expires, geocoder callsCount should be 0
-        assertEquals(0, fakeReverseGeocoder.callsCount)
+        // Before debounce timer expires, geocoder callsCount should still be 1 (no new call yet)
+        assertEquals(1, fakeReverseGeocoder.callsCount)
 
         advanceUntilIdle()
 
-        // After settling, only 1 geocoder call should have been made for the final coordinate
-        assertEquals(1, fakeReverseGeocoder.callsCount)
+        // After settling, exactly 1 additional geocoder call was made for the final coordinate (total 2)
+        assertEquals(2, fakeReverseGeocoder.callsCount)
         assertEquals(Coordinate(-6.1003, 106.8003), fakeReverseGeocoder.lastCoordinate)
         assertEquals(Coordinate(-6.1003, 106.8003), viewModel.uiState.value.selectedCoordinate)
     }
@@ -611,10 +634,10 @@ class MapViewModelTest {
         viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         advanceUntilIdle()
 
-        // onMapCenterMoved should be ignored
+        // onMapCenterMoved should be ignored, coordinate remains Mayapada Tower
         viewModel.onMapCenterMoved(-6.1111, 106.1111)
         advanceUntilIdle()
-        assertNull(viewModel.uiState.value.selectedCoordinate)
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, viewModel.uiState.value.selectedCoordinate)
 
         // onMapTap should work
         val tapCoord = Coordinate(-6.2222, 106.2222)
@@ -624,22 +647,29 @@ class MapViewModelTest {
     }
 
     @Test
-    fun `when in TAP_TO_SELECT mode, tapping directly on anchor coordinate is ignored`() = runTest(testDispatcher) {
+    fun `when in TAP_TO_SELECT mode, tapping on anchor coordinate selects anchor`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
         advanceUntilIdle()
 
-        // Attempt to tap directly on Mayapada Tower anchor
+        // First tap another point
+        viewModel.onMapTap(-6.2222, 106.2222)
+        advanceUntilIdle()
+        assertEquals(Coordinate(-6.2222, 106.2222), viewModel.uiState.value.selectedCoordinate)
+
+        // Tap directly on Mayapada Tower anchor
         val anchor = RadiusConfig.MAYAPADA_TOWER
         viewModel.onMapTap(anchor.latitude, anchor.longitude)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertNull("Tapping on the center anchor must not set it as a pinpoint", state.selectedCoordinate)
+        assertEquals("Tapping on center anchor selects Mayapada Tower", anchor, state.selectedCoordinate)
+        assertEquals(0.0, state.distanceToAnchorMeters ?: -1.0, 0.001)
+        assertTrue(state.isWithinRadius)
     }
 
     @Test
-    fun `when in CENTER_PIN mode, onMapTap is ignored`() = runTest(testDispatcher) {
+    fun `when in CENTER_PIN mode, onMapTap is ignored and retains existing coordinate`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         advanceUntilIdle()
         assertEquals(MapSelectionMode.CENTER_PIN, viewModel.uiState.value.selectionMode)
@@ -647,8 +677,8 @@ class MapViewModelTest {
         viewModel.onMapTap(-6.5555, 106.5555)
         advanceUntilIdle()
 
-        // Coordinate must remain null because taps are ignored in CENTER_PIN mode
-        assertNull(viewModel.uiState.value.selectedCoordinate)
+        // Coordinate must remain Mayapada Tower because taps are ignored in CENTER_PIN mode
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, viewModel.uiState.value.selectedCoordinate)
     }
 
     @Test
@@ -699,6 +729,110 @@ class MapViewModelTest {
         assertEquals("Unnamed Location", fakeLocationRepository.lastSavedLocation?.name)
         assertTrue(viewModel.uiState.value.event is MapEvent.ShowSnackbar)
         assertEquals("Location saved: Unnamed Location", (viewModel.uiState.value.event as MapEvent.ShowSnackbar).message)
+    }
+
+    @Test
+    fun `when map moved away from anchor, isRewindEnabled becomes true`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse("Initially at anchor, rewind should not be enabled", viewModel.uiState.value.isRewindEnabled)
+
+        // Move to C
+        viewModel.onMapCenterMoved(-6.2200, 106.8300)
+        advanceUntilIdle()
+
+        assertTrue("After moving away, rewind should be enabled", viewModel.uiState.value.isRewindEnabled)
+    }
+
+    @Test
+    fun `when onRewindClick executed without mock or lock, map animates to anchor and disables rewind`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onMapCenterMoved(-6.2200, 106.8300)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isRewindEnabled)
+
+        viewModel.onRewindClick()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, state.selectedCoordinate)
+        assertTrue(state.event is MapEvent.AnimateCamera)
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, (state.event as MapEvent.AnimateCamera).coordinate)
+        assertFalse("Rewind must be disabled after reaching anchor target", state.isRewindEnabled)
+    }
+
+    @Test
+    fun `when position locked and map moved, onRewindClick rewinds to lock location first then anchor`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val lockCoord = Coordinate(-6.2150, 106.8250)
+        viewModel.onMapCenterMoved(lockCoord.latitude, lockCoord.longitude)
+        advanceUntilIdle()
+
+        // Lock position
+        viewModel.togglePositionLock()
+        assertTrue(viewModel.uiState.value.isPositionLocked)
+
+        // User pans map to C (center pin ignores movement while locked, tap free selection can move or rewind target)
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
+        viewModel.togglePositionLock() // Unlock temporarily to select C
+        viewModel.onMapTap(-6.2200, 106.8300)
+        advanceUntilIdle()
+
+        // First rewind -> should go back to lockCoord
+        viewModel.onRewindClick()
+        advanceUntilIdle()
+
+        assertEquals(lockCoord, viewModel.uiState.value.selectedCoordinate)
+        assertTrue(viewModel.uiState.value.isRewindEnabled)
+
+        // Second rewind -> should go to anchor
+        viewModel.onRewindClick()
+        advanceUntilIdle()
+
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, viewModel.uiState.value.selectedCoordinate)
+        assertFalse(viewModel.uiState.value.isRewindEnabled)
+    }
+
+    @Test
+    fun `when mock active and position locked, second rewind triggers auto-unlock and animates to mock location`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Valid coordinates within 500m radius of Mayapada Tower (-6.213726, 106.819897)
+        val mockCoord = Coordinate(-6.2140, 106.8205)
+        val lockCoord = Coordinate(-6.2145, 106.8210)
+
+        // Mock at mockCoord
+        viewModel.onMapCenterMoved(mockCoord.latitude, mockCoord.longitude)
+        advanceUntilIdle()
+        viewModel.onStartMock()
+        advanceUntilIdle()
+        assertTrue("Mock should be active", viewModel.uiState.value.isMockActive)
+
+        // Lock at lockCoord
+        viewModel.onMapCenterMoved(lockCoord.latitude, lockCoord.longitude)
+        advanceUntilIdle()
+        viewModel.togglePositionLock()
+        assertTrue(viewModel.uiState.value.isPositionLocked)
+
+        // Rewind 1 -> to lockCoord
+        viewModel.onRewindClick()
+        advanceUntilIdle()
+        assertEquals(lockCoord, viewModel.uiState.value.selectedCoordinate)
+        assertTrue(viewModel.uiState.value.isPositionLocked)
+
+        // Rewind 2 -> should auto-unlock and go to mockCoord
+        viewModel.onRewindClick()
+        advanceUntilIdle()
+
+        assertEquals(mockCoord, viewModel.uiState.value.selectedCoordinate)
+        assertFalse("Should auto-unlock on rewind to mock location", viewModel.uiState.value.isPositionLocked)
+        assertFalse("Should be disabled once final target reached", viewModel.uiState.value.isRewindEnabled)
     }
 }
 

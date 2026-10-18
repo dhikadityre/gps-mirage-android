@@ -10,9 +10,9 @@ enum class MapSelectionMode {
 }
 
 data class MapUiState(
-    val selectedCoordinate: Coordinate? = null,
+    val selectedCoordinate: Coordinate? = RadiusConfig.MAYAPADA_TOWER,
     val selectedLocationName: String = "",
-    val isResolvingAddress: Boolean = false,
+    val isResolvingAddress: Boolean = true,
     val resolvedShortAddress: String? = null,
     val isLoading: Boolean = false,
     val isMockActive: Boolean = false,
@@ -21,10 +21,11 @@ data class MapUiState(
     val favoriteLocations: List<Location> = emptyList(),
     val isQuickLocationsVisible: Boolean = false,
     val radiusConfig: RadiusConfig = RadiusConfig(),
-    val distanceToAnchorMeters: Double? = null,
+    val distanceToAnchorMeters: Double? = 0.0,
     val isWithinRadius: Boolean = true,
     val selectionMode: MapSelectionMode = MapSelectionMode.CENTER_PIN,
     val isPositionLocked: Boolean = false,
+    val isRewindEnabled: Boolean = false,
     val error: String? = null,
     val event: MapEvent? = null
 )
@@ -34,4 +35,5 @@ sealed interface MapEvent {
     object NavigateToSetupGuide : MapEvent
     object MockStarted : MapEvent
     object MockStopped : MapEvent
+    data class AnimateCamera(val coordinate: Coordinate) : MapEvent
 }

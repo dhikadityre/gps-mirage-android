@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.dhikadityre.gpsmirage.core.geo.ReverseGeocoder
+import com.dhikadityre.gpsmirage.domain.location.RewindCoordinator
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
@@ -32,7 +33,8 @@ class MapViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     private val settingsRepository: SettingsRepository,
     private val geoEngine: GeoEngine,
-    private val reverseGeocoder: ReverseGeocoder
+    private val reverseGeocoder: ReverseGeocoder,
+    private val rewindCoordinator: RewindCoordinator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -42,10 +44,12 @@ class MapViewModel @Inject constructor(
     private var addressResolutionJob: Job? = null
 
     init {
+        rewindCoordinator.setCenterAnchor(RadiusConfig.MAYAPADA_TOWER)
         observeMockState()
         observeRadiusConfig()
         loadRecentLocations()
         loadFavoriteLocations()
+        resolveAddress(RadiusConfig.MAYAPADA_TOWER, withDelay = false)
     }
 
     private fun calculateRadiusValidation(
@@ -64,12 +68,14 @@ class MapViewModel @Inject constructor(
     private fun observeRadiusConfig() {
         viewModelScope.launch {
             settingsRepository.radiusConfig.collectLatest { config ->
+                config.anchor?.let { rewindCoordinator.setCenterAnchor(it) }
                 _uiState.update { ui ->
                     val (dist, isWithin) = calculateRadiusValidation(ui.selectedCoordinate, config)
                     ui.copy(
                         radiusConfig = config,
                         distanceToAnchorMeters = dist,
-                        isWithinRadius = isWithin
+                        isWithinRadius = isWithin,
+                        isRewindEnabled = rewindCoordinator.isRewindAvailable()
                     )
                 }
             }
@@ -115,7 +121,18 @@ class MapViewModel @Inject constructor(
     }
 
     fun togglePositionLock() {
-        _uiState.update { it.copy(isPositionLocked = !it.isPositionLocked) }
+        val newLocked = !_uiState.value.isPositionLocked
+        if (newLocked) {
+            _uiState.value.selectedCoordinate?.let { rewindCoordinator.onLockPosition(it) }
+        } else {
+            rewindCoordinator.onUnlockPosition()
+        }
+        _uiState.update {
+            it.copy(
+                isPositionLocked = newLocked,
+                isRewindEnabled = rewindCoordinator.isRewindAvailable()
+            )
+        }
     }
 
     fun clearSelectedCoordinate() {
@@ -138,21 +155,14 @@ class MapViewModel @Inject constructor(
             return
         }
 
-        // Guard: If coordinate is at the anchor and selectedCoordinate is null,
-        // do not treat the initial anchor centering as a pinpoint selection.
-        val anchor = currentState.radiusConfig.anchor
-        if (anchor != null && currentState.selectedCoordinate == null) {
-            val isAtAnchor = Math.abs(lat - anchor.latitude) < 0.00001 &&
-                    Math.abs(lng - anchor.longitude) < 0.00001
-            if (isAtAnchor) {
-                return
-            }
+        // Guard: Ignore uninitialized / default (0.0, 0.0) coordinates from OSMDroid
+        if (Math.abs(lat) < 0.00001 && Math.abs(lng) < 0.00001) {
+            return
         }
 
         val selected = Coordinate(latitude = lat, longitude = lng)
+        rewindCoordinator.onMapMoved(selected)
         val (dist, isWithin) = calculateRadiusValidation(selected, currentState.radiusConfig)
-
-        addressResolutionJob?.cancel()
 
         _uiState.update { ui ->
             ui.copy(
@@ -161,25 +171,12 @@ class MapViewModel @Inject constructor(
                 resolvedShortAddress = null,
                 isResolvingAddress = true,
                 distanceToAnchorMeters = dist,
-                isWithinRadius = isWithin
+                isWithinRadius = isWithin,
+                isRewindEnabled = rewindCoordinator.isRewindAvailable()
             )
         }
 
-        addressResolutionJob = viewModelScope.launch {
-            delay(400L)
-            val result = reverseGeocoder.getShortAddress(selected)
-            _uiState.update { ui ->
-                if (ui.selectedCoordinate == selected) {
-                    ui.copy(
-                        isResolvingAddress = false,
-                        resolvedShortAddress = result?.shortAddress,
-                        selectedLocationName = result?.shortAddress ?: ""
-                    )
-                } else {
-                    ui
-                }
-            }
-        }
+        resolveAddress(selected, withDelay = true)
     }
 
     fun onMapTap(lat: Double, lng: Double) {
@@ -188,20 +185,14 @@ class MapViewModel @Inject constructor(
             return
         }
 
-        // Guard: Anchor point is a preview center reference, not a selectable pinpoint
-        val anchor = currentState.radiusConfig.anchor
-        if (anchor != null) {
-            val isAtAnchor = Math.abs(lat - anchor.latitude) < 0.00001 &&
-                    Math.abs(lng - anchor.longitude) < 0.00001
-            if (isAtAnchor) {
-                return
-            }
+        // Guard: Ignore uninitialized (0.0, 0.0) coordinates
+        if (Math.abs(lat) < 0.00001 && Math.abs(lng) < 0.00001) {
+            return
         }
 
         val selected = Coordinate(latitude = lat, longitude = lng)
+        rewindCoordinator.onMapMoved(selected)
         val (dist, isWithin) = calculateRadiusValidation(selected, currentState.radiusConfig)
-
-        addressResolutionJob?.cancel()
 
         _uiState.update { ui ->
             ui.copy(
@@ -210,14 +201,23 @@ class MapViewModel @Inject constructor(
                 resolvedShortAddress = null,
                 isResolvingAddress = true,
                 distanceToAnchorMeters = dist,
-                isWithinRadius = isWithin
+                isWithinRadius = isWithin,
+                isRewindEnabled = rewindCoordinator.isRewindAvailable()
             )
         }
 
+        resolveAddress(selected, withDelay = false)
+    }
+
+    private fun resolveAddress(coordinate: Coordinate, withDelay: Boolean = true) {
+        addressResolutionJob?.cancel()
         addressResolutionJob = viewModelScope.launch {
-            val result = reverseGeocoder.getShortAddress(selected)
+            if (withDelay) {
+                delay(400L)
+            }
+            val result = reverseGeocoder.getShortAddress(coordinate)
             _uiState.update { ui ->
-                if (ui.selectedCoordinate == selected) {
+                if (ui.selectedCoordinate == coordinate) {
                     ui.copy(
                         isResolvingAddress = false,
                         resolvedShortAddress = result?.shortAddress,
@@ -253,6 +253,7 @@ class MapViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true) }
         when (val result = mockLocationManager.start(location)) {
             is MockStartResult.Success -> {
+                rewindCoordinator.onMockStarted(Coordinate(location.latitude, location.longitude))
                 viewModelScope.launch {
                     val historyId = historyRepository.startSession(
                         History(
@@ -266,6 +267,7 @@ class MapViewModel @Inject constructor(
                     _uiState.update { ui ->
                         ui.copy(
                             isLoading = false,
+                            isRewindEnabled = rewindCoordinator.isRewindAvailable(),
                             event = MapEvent.MockStarted
                         )
                     }
@@ -373,6 +375,52 @@ class MapViewModel @Inject constructor(
 
     fun toggleQuickLocations() {
         _uiState.update { it.copy(isQuickLocationsVisible = !it.isQuickLocationsVisible) }
+    }
+
+    fun onRewindClick() {
+        val target = rewindCoordinator.executeRewindStep() ?: return
+        val currentLocked = _uiState.value.isPositionLocked
+        val shouldUnlock = target.requiresUnlock && currentLocked
+        if (shouldUnlock) {
+            rewindCoordinator.onUnlockPosition()
+        }
+        val targetCoord = target.coordinate
+        rewindCoordinator.onMapMoved(targetCoord)
+        val (dist, isWithin) = calculateRadiusValidation(targetCoord, _uiState.value.radiusConfig)
+
+        _uiState.update { ui ->
+            ui.copy(
+                selectedCoordinate = targetCoord,
+                selectedLocationName = "",
+                resolvedShortAddress = null,
+                isResolvingAddress = true,
+                distanceToAnchorMeters = dist,
+                isWithinRadius = isWithin,
+                isPositionLocked = if (shouldUnlock) false else currentLocked,
+                isRewindEnabled = rewindCoordinator.isRewindAvailable(),
+                event = MapEvent.AnimateCamera(targetCoord)
+            )
+        }
+        resolveAddress(targetCoord, withDelay = false)
+    }
+
+    fun onRecenterToAnchor() {
+        val anchor = _uiState.value.radiusConfig.anchor ?: RadiusConfig.MAYAPADA_TOWER
+        rewindCoordinator.onMapMoved(anchor)
+        val (dist, isWithin) = calculateRadiusValidation(anchor, _uiState.value.radiusConfig)
+        _uiState.update { ui ->
+            ui.copy(
+                selectedCoordinate = anchor,
+                selectedLocationName = "",
+                resolvedShortAddress = null,
+                isResolvingAddress = true,
+                distanceToAnchorMeters = dist,
+                isWithinRadius = isWithin,
+                isRewindEnabled = rewindCoordinator.isRewindAvailable(),
+                event = MapEvent.AnimateCamera(anchor)
+            )
+        }
+        resolveAddress(anchor, withDelay = false)
     }
 
     fun clearEvent() {
