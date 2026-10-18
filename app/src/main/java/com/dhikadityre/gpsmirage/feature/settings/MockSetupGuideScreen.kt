@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,7 +29,7 @@ fun MockSetupGuideScreen(
                 title = { Text("Mock Location Setup") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -37,6 +39,7 @@ fun MockSetupGuideScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -69,7 +72,7 @@ fun MockSetupGuideScreen(
                 description = "Re-open GPS Mirage, select any coordinate, and tap Start."
             )
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(12.dp))
 
             Button(
                 onClick = {

@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -74,6 +77,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -211,9 +215,13 @@ fun MapScreen(
                 )
             }
 
+            val configuration = LocalConfiguration.current
+            val isCompactScreen = configuration.screenHeightDp < 640
+
             MapFloatingControls(
                 selectionMode = uiState.selectionMode,
                 isPositionLocked = uiState.isPositionLocked,
+                isCompact = isCompactScreen,
                 onToggleSelectionMode = {
                     val nextMode = if (uiState.selectionMode == MapSelectionMode.CENTER_PIN) {
                         MapSelectionMode.TAP_TO_SELECT
@@ -229,7 +237,13 @@ fun MapScreen(
                 onZoomOut = { mapViewRef?.controller?.zoomOut() },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .offset(y = (-80).dp)
+                    .offset(
+                        y = if (isCompactScreen && uiState.selectedCoordinate != null && !uiState.isMockActive) {
+                            (-100).dp
+                        } else {
+                            (-60).dp
+                        }
+                    )
                     .padding(end = 16.dp)
             )
 
@@ -489,6 +503,8 @@ private fun MockActiveBanner(
                         text = location.name,
                         color = Color(0xFFA5D6A7),
                         fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                     Text(
@@ -542,16 +558,27 @@ private fun SelectedCoordinateCard(
         }
     }
 
+    val configuration = LocalConfiguration.current
+    val isCompactScreen = configuration.screenHeightDp < 640
+    val maxCardHeight = if (isCompactScreen) {
+        (configuration.screenHeightDp * 0.58f).coerceIn(240f, 340f).dp
+    } else {
+        (configuration.screenHeightDp * 0.50f).coerceIn(320f, 480f).dp
+    }
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(max = maxCardHeight),
         elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(if (isCompactScreen) 12.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isCompactScreen) 8.dp else 12.dp)
         ) {
             // Location Preview Card (Street Name & Lat/Lng)
             Surface(
@@ -779,6 +806,7 @@ private fun EnterCoordinatesSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp)
                 .navigationBarsPadding(),
@@ -996,12 +1024,15 @@ private fun MockNotConfiguredDialog(
 private fun MapFloatingControls(
     selectionMode: MapSelectionMode,
     isPositionLocked: Boolean,
+    isCompact: Boolean = false,
     onToggleSelectionMode: () -> Unit,
     onTogglePositionLock: () -> Unit,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val buttonSize = if (isCompact) 40.dp else 44.dp
+
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
@@ -1016,7 +1047,7 @@ private fun MapFloatingControls(
             // Mode Switcher Button (Center Pin vs Tap)
             IconButton(
                 onClick = onToggleSelectionMode,
-                modifier = Modifier.size(44.dp)
+                modifier = Modifier.size(buttonSize)
             ) {
                 Icon(
                     imageVector = if (selectionMode == MapSelectionMode.CENTER_PIN) {
@@ -1036,7 +1067,7 @@ private fun MapFloatingControls(
             // Position Lock Toggle Button
             IconButton(
                 onClick = onTogglePositionLock,
-                modifier = Modifier.size(44.dp)
+                modifier = Modifier.size(buttonSize)
             ) {
                 Icon(
                     imageVector = if (isPositionLocked) Icons.Default.Lock else Icons.Default.LockOpen,
@@ -1059,7 +1090,7 @@ private fun MapFloatingControls(
             // Zoom In
             IconButton(
                 onClick = onZoomIn,
-                modifier = Modifier.size(44.dp)
+                modifier = Modifier.size(buttonSize)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -1071,7 +1102,7 @@ private fun MapFloatingControls(
             // Zoom Out
             IconButton(
                 onClick = onZoomOut,
-                modifier = Modifier.size(44.dp)
+                modifier = Modifier.size(buttonSize)
             ) {
                 Icon(
                     imageVector = Icons.Default.Remove,
