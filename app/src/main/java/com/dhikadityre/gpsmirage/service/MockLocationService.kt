@@ -18,20 +18,28 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.dhikadityre.dev.tools.R
 import com.dhikadityre.gpsmirage.MainActivity
+import com.dhikadityre.gpsmirage.domain.settings.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MockLocationService : Service() {
 
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
     companion object {
-        const val CHANNEL_ID = "gps_mirage_mock_location"
+        const val CHANNEL_ID_DEFAULT = "gps_mirage_mock_location_default"
+        const val CHANNEL_ID_SILENT = "gps_mirage_mock_location_silent"
+        const val CHANNEL_ID = CHANNEL_ID_DEFAULT
         const val NOTIFICATION_ID = 1001
         const val PROVIDER_NAME = LocationManager.GPS_PROVIDER
         val DUAL_PROVIDERS = listOf(
@@ -89,6 +97,7 @@ class MockLocationService : Service() {
     private var currentSpeed = 0f
     private var currentBearing = 0f
     private var locationName = ""
+    private var showStatusBarNotification = true
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -96,6 +105,20 @@ class MockLocationService : Service() {
         super.onCreate()
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         createNotificationChannel()
+        observeAppearanceConfig()
+    }
+
+    private fun observeAppearanceConfig() {
+        serviceScope.launch {
+            settingsRepository.appearanceConfig.collectLatest { config ->
+                val changed = showStatusBarNotification != config.showStatusBarNotification
+                showStatusBarNotification = config.showStatusBarNotification
+                if (changed && mockJob?.isActive == true) {
+                    val nm = getSystemService(NotificationManager::class.java)
+                    nm?.notify(NOTIFICATION_ID, buildNotification())
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -229,15 +252,27 @@ class MockLocationService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Mock Location",
+            val nm = getSystemService(NotificationManager::class.java) ?: return
+
+            val defaultChannel = NotificationChannel(
+                CHANNEL_ID_DEFAULT,
+                "Mock Location (Standard)",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "GPS Mirage mock location active"
+                description = "GPS Mirage mock location notification with status bar icon"
             }
-            val nm = getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(channel)
+
+            val silentChannel = NotificationChannel(
+                CHANNEL_ID_SILENT,
+                "Mock Location (Silent/Minimal)",
+                NotificationManager.IMPORTANCE_MIN
+            ).apply {
+                description = "GPS Mirage mock location notification without status bar icon"
+                setShowBadge(false)
+            }
+
+            nm.createNotificationChannel(defaultChannel)
+            nm.createNotificationChannel(silentChannel)
         }
     }
 
@@ -256,14 +291,21 @@ class MockLocationService : Service() {
         val title = if (locationName.isNotBlank()) locationName else "Mock Location Active"
         val content = "%.6f, %.6f".format(currentLat, currentLng)
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val channelId = if (showStatusBarNotification) CHANNEL_ID_DEFAULT else CHANNEL_ID_SILENT
+        val priority = if (showStatusBarNotification) {
+            NotificationCompat.PRIORITY_LOW
+        } else {
+            NotificationCompat.PRIORITY_MIN
+        }
+
+        return NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(content)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(openIntent)
             .setOngoing(true)
             .addAction(0, "Stop", stopIntent)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(priority)
             .build()
     }
 

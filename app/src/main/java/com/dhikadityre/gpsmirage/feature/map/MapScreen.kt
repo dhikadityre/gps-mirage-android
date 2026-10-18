@@ -1,5 +1,7 @@
 package com.dhikadityre.gpsmirage.feature.map
 
+import com.dhikadityre.gpsmirage.core.geo.TileProviders
+import com.dhikadityre.gpsmirage.core.model.MapLayerStyle
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -205,6 +207,7 @@ fun MapScreen(
                 resolvedShortAddress = uiState.resolvedShortAddress,
                 selectionMode = uiState.selectionMode,
                 isPositionLocked = uiState.isPositionLocked,
+                mapLayerStyle = uiState.mapLayerStyle,
                 onMapTap = { lat, lng -> viewModel.onMapTap(lat, lng) },
                 onMapCenterMoved = { lat, lng -> viewModel.onMapCenterMoved(lat, lng) },
                 onMapViewReady = { mapViewRef = it }
@@ -456,6 +459,7 @@ private fun OsmMapView(
     resolvedShortAddress: String?,
     selectionMode: MapSelectionMode,
     isPositionLocked: Boolean,
+    mapLayerStyle: MapLayerStyle = MapLayerStyle.GOOGLE_ROADMAP,
     onMapTap: (Double, Double) -> Unit,
     onMapCenterMoved: (Double, Double) -> Unit,
     onMapViewReady: (MapView) -> Unit
@@ -473,7 +477,8 @@ private fun OsmMapView(
                 osmdroidTileCache = java.io.File(ctx.cacheDir, "osmdroid/tiles")
             }
             MapView(ctx).apply {
-                setTileSource(TileSourceFactory.MAPNIK)
+                val tileSource = TileProviders.getTileSource(mapLayerStyle)
+                setTileSource(tileSource)
                 setBuiltInZoomControls(false)
                 setMultiTouchControls(true)
 
@@ -553,6 +558,12 @@ private fun OsmMapView(
             }
         },
         update = { mapView ->
+            val currentTileSource = TileProviders.getTileSource(mapLayerStyle)
+            if (mapView.tileProvider.tileSource.name() != currentTileSource.name()) {
+                mapView.setTileSource(currentTileSource)
+                mapView.invalidate()
+            }
+
             InfoWindow.closeAllInfoWindowsOn(mapView)
             mapView.overlays.removeAll { it is Marker || it is Polygon }
 

@@ -2,6 +2,7 @@ package com.dhikadityre.gpsmirage.feature.map
 
 import com.dhikadityre.gpsmirage.core.model.Coordinate
 import com.dhikadityre.gpsmirage.core.model.Location
+import com.dhikadityre.gpsmirage.core.model.MapLayerStyle
 import com.dhikadityre.gpsmirage.core.model.RadiusConfig
 
 enum class MapSelectionMode {
@@ -36,6 +37,7 @@ data class MapUiState(
     val isRewindEnabled: Boolean = false,
     val previewSnapshot: MapPreviewSnapshot? = null,
     val previewingLocationName: String? = null,
+    val mapLayerStyle: MapLayerStyle = MapLayerStyle.GOOGLE_ROADMAP,
     val error: String? = null,
     val event: MapEvent? = null
 )

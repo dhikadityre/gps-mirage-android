@@ -99,4 +99,64 @@ class SettingsRepositoryTest {
         assertNull(resultConfig.anchor)
         assertEquals(800.0, resultConfig.radiusMeters, 0.001)
     }
+
+    @Test
+    fun defaultAppearanceConfig_returnsDefaultValues() = testScope.runTest {
+        val config = repository.appearanceConfig.first()
+
+        assertEquals(com.dhikadityre.gpsmirage.core.model.MapLayerStyle.GOOGLE_ROADMAP, config.mapStyle)
+        assertTrue(config.showStatusBarNotification)
+        assertEquals(com.dhikadityre.gpsmirage.core.model.AppLanguage.INDONESIAN, config.language)
+        assertEquals(com.dhikadityre.gpsmirage.core.model.AppThemeMode.SYSTEM, config.themeMode)
+    }
+
+    @Test
+    fun updateMapStyle_persistsAndEmitsNewStyle() = testScope.runTest {
+        repository.updateMapStyle(com.dhikadityre.gpsmirage.core.model.MapLayerStyle.GOOGLE_HYBRID)
+
+        val config = repository.appearanceConfig.first()
+        assertEquals(com.dhikadityre.gpsmirage.core.model.MapLayerStyle.GOOGLE_HYBRID, config.mapStyle)
+    }
+
+    @Test
+    fun updateShowStatusBarNotification_persistsAndEmitsNewValue() = testScope.runTest {
+        repository.updateShowStatusBarNotification(false)
+
+        val config = repository.appearanceConfig.first()
+        assertFalse(config.showStatusBarNotification)
+    }
+
+    @Test
+    fun updateLanguage_persistsAndEmitsNewLanguage() = testScope.runTest {
+        repository.updateLanguage(com.dhikadityre.gpsmirage.core.model.AppLanguage.ENGLISH)
+
+        val config = repository.appearanceConfig.first()
+        assertEquals(com.dhikadityre.gpsmirage.core.model.AppLanguage.ENGLISH, config.language)
+    }
+
+    @Test
+    fun updateThemeMode_persistsAndEmitsNewThemeMode() = testScope.runTest {
+        repository.updateThemeMode(com.dhikadityre.gpsmirage.core.model.AppThemeMode.DARK)
+
+        val config = repository.appearanceConfig.first()
+        assertEquals(com.dhikadityre.gpsmirage.core.model.AppThemeMode.DARK, config.themeMode)
+    }
+
+    @Test
+    fun updateAppearanceConfig_persistsAllValues() = testScope.runTest {
+        val updated = com.dhikadityre.gpsmirage.core.model.AppearanceConfig(
+            mapStyle = com.dhikadityre.gpsmirage.core.model.MapLayerStyle.OSM_STANDARD,
+            showStatusBarNotification = false,
+            language = com.dhikadityre.gpsmirage.core.model.AppLanguage.ENGLISH,
+            themeMode = com.dhikadityre.gpsmirage.core.model.AppThemeMode.LIGHT
+        )
+        repository.updateAppearanceConfig(updated)
+
+        val result = repository.appearanceConfig.first()
+        assertEquals(com.dhikadityre.gpsmirage.core.model.MapLayerStyle.OSM_STANDARD, result.mapStyle)
+        assertFalse(result.showStatusBarNotification)
+        assertEquals(com.dhikadityre.gpsmirage.core.model.AppLanguage.ENGLISH, result.language)
+        assertEquals(com.dhikadityre.gpsmirage.core.model.AppThemeMode.LIGHT, result.themeMode)
+    }
 }
+

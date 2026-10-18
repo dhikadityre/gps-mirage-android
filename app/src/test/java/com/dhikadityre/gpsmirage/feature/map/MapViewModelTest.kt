@@ -115,8 +115,31 @@ class MapViewModelTest {
         val configFlow = MutableStateFlow(RadiusConfig())
         override val radiusConfig: Flow<RadiusConfig> = configFlow
 
+        val appearanceFlow = MutableStateFlow(com.dhikadityre.gpsmirage.core.model.AppearanceConfig())
+        override val appearanceConfig: Flow<com.dhikadityre.gpsmirage.core.model.AppearanceConfig> = appearanceFlow
+
         override suspend fun updateRadiusConfig(config: RadiusConfig) {
             configFlow.value = config
+        }
+
+        override suspend fun updateAppearanceConfig(config: com.dhikadityre.gpsmirage.core.model.AppearanceConfig) {
+            appearanceFlow.value = config
+        }
+
+        override suspend fun updateMapStyle(mapStyle: com.dhikadityre.gpsmirage.core.model.MapLayerStyle) {
+            appearanceFlow.value = appearanceFlow.value.copy(mapStyle = mapStyle)
+        }
+
+        override suspend fun updateShowStatusBarNotification(show: Boolean) {
+            appearanceFlow.value = appearanceFlow.value.copy(showStatusBarNotification = show)
+        }
+
+        override suspend fun updateLanguage(language: com.dhikadityre.gpsmirage.core.model.AppLanguage) {
+            appearanceFlow.value = appearanceFlow.value.copy(language = language)
+        }
+
+        override suspend fun updateThemeMode(themeMode: com.dhikadityre.gpsmirage.core.model.AppThemeMode) {
+            appearanceFlow.value = appearanceFlow.value.copy(themeMode = themeMode)
         }
     }
 

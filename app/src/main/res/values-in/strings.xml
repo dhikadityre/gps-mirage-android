@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GPS Mirage</string>
+
+    <!-- Navigation -->
+    <string name="nav_map">Peta</string>
+    <string name="nav_locations">Lokasi</string>
+    <string name="nav_tools">Tools</string>
+    <string name="nav_more">Lainnya</string>
+
+    <!-- Map Screen -->
+    <string name="map_enter_coordinates">Masukkan Koordinat</string>
+    <string name="map_current_location">Lokasi Saat Ini</string>
+    <string name="map_quick_locations">Lokasi Cepat</string>
+    <string name="map_pin_location">Pin Lokasi</string>
+    <string name="map_save">Simpan</string>
+    <string name="map_start">Mulai</string>
+    <string name="map_stop">Berhenti</string>
+
+    <!-- Mock Location -->
+    <string name="mock_active">● MOCK LOCATION AKTIF</string>
+    <string name="mock_inactive">Mock location tidak aktif</string>
+    <string name="mock_not_configured">Mock location belum dikonfigurasi.</string>
+    <string name="mock_setup_description">GPS Mirage harus dipilih sebagai aplikasi tiruan lokasi di Opsi Pengembang.</string>
+    <string name="mock_open_developer_options">Buka Opsi Pengembang</string>
+    <string name="mock_how_to_setup">Cara Setup</string>
+    <string name="mock_setup_step_1">1. Buka Opsi Pengembang</string>
+    <string name="mock_setup_step_2">2. Pilih "Pilih aplikasi lokasi palsu"</string>
+    <string name="mock_setup_step_3">3. Pilih GPS Mirage</string>
+    <string name="mock_setup_step_4">4. Kembali ke GPS Mirage</string>
+    <string name="mock_setup_step_5">5. Tekan Mulai</string>
+
+    <!-- Location -->
+    <string name="location_name">Nama Lokasi</string>
+    <string name="location_latitude">Latitude</string>
+    <string name="location_longitude">Longitude</string>
+    <string name="location_accuracy">Akurasi</string>
+    <string name="location_altitude">Ketinggian</string>
+    <string name="location_speed">Kecepatan</string>
+    <string name="location_bearing">Arah (Bearing)</string>
+    <string name="location_unnamed">Lokasi Tanpa Nama</string>
+    <string name="location_save_and_start">Simpan &amp; Mulai</string>
+    <string name="location_preview_on_map">Pratinjau di Peta</string>
+    <string name="location_start_mock">Mulai Mock Location</string>
+    <string name="location_delete_title">Hapus "%s"?</string>
+    <string name="location_delete_message">Lokasi ini akan dihapus dari daftar lokasi tersimpan Anda.</string>
+    <string name="location_edit">Edit</string>
+    <string name="location_delete">Hapus</string>
+    <string name="location_move_to_folder">Pindahkan ke Folder</string>
+    <string name="location_advanced">Lanjutan</string>
+
+    <!-- Locations Screen -->
+    <string name="locations_all">Semua</string>
+    <string name="locations_favorites">Favorit</string>
+    <string name="locations_folders">Folder</string>
+    <string name="locations_history">Riwayat</string>
+    <string name="locations_empty_title">Belum ada lokasi tersimpan.</string>
+    <string name="locations_empty_message">Pilih lokasi pada peta dan simpan untuk akses cepat nanti.</string>
+    <string name="locations_open_map">Buka Peta</string>
+
+    <!-- Folders -->
+    <string name="folder_create">Buat Folder</string>
+    <string name="folder_rename">Ubah Nama Folder</string>
+    <string name="folder_delete">Hapus Folder</string>
+    <string name="folder_export">Ekspor Folder</string>
+    <string name="folder_name">Nama Folder</string>
+    <string name="folder_empty_title">Belum ada folder.</string>
+    <string name="folder_empty_message">Buat folder untuk mengelompokkan lokasi tersimpan Anda.</string>
+    <string name="folder_delete_confirm">Hapus folder "%s"? Lokasi di dalamnya tidak akan terhapus.</string>
+
+    <!-- History -->
+    <string name="history_today">Hari Ini</string>
+    <string name="history_yesterday">Kemarin</string>
+    <string name="history_empty_title">Belum ada riwayat lokasi.</string>
+    <string name="history_empty_message">Sesi mock location Anda akan muncul di sini.</string>
+    <string name="history_duration">Durasi: %s</string>
+
+    <!-- Tools -->
+    <string name="tools_coordinate_generator">Coordinate Generator</string>
+    <string name="tools_import">Import Locations</string>
+    <string name="tools_export">Export Locations</string>
+    <string name="tools_bulk_parser">Bulk Text Parser</string>
+
+    <!-- Generator -->
+    <string name="generator_center_latitude">Latitude Pusat</string>
+    <string name="generator_center_longitude">Longitude Pusat</string>
+    <string name="generator_radius">Radius</string>
+    <string name="generator_radius_unit">meter</string>
+    <string name="generator_count">Jumlah Titik</string>
+    <string name="generator_mode">Mode Pembuatan</string>
+    <string name="generator_mode_random">Acak</string>
+    <string name="generator_generate">Hasilkan</string>
+    <string name="generator_copy_one">Salin Satu</string>
+    <string name="generator_copy_all">Salin Semua</string>
+    <string name="generator_copy_json">Salin JSON</string>
+    <string name="generator_save_all">Simpan Semua</string>
+    <string name="generator_result">Berhasil membuat %d lokasi</string>
+
+    <!-- Import -->
+    <string name="import_title">Impor Lokasi</string>
+    <string name="import_paste_hint">Tempel koordinat atau JSON di sini…</string>
+    <string name="import_preview">Pratinjau</string>
+    <string name="import_found">Ditemukan: %d lokasi</string>
+    <string name="import_named">%d bernama</string>
+    <string name="import_unnamed">%d tanpa nama</string>
+    <string name="import_duplicates">Duplikat: %d</string>
+    <string name="import_action">Impor %d Lokasi</string>
+    <string name="import_duplicate_title">%d lokasi duplikat ditemukan.</string>
+    <string name="import_duplicate_message">Apa yang ingin Anda lakukan?</string>
+    <string name="import_skip_duplicates">Lewati duplikat</string>
+    <string name="import_create_duplicates">Buat duplikat baru</string>
+    <string name="import_replace_existing">Ganti yang sudah ada</string>
+
+    <!-- Export -->
+    <string name="export_title">Ekspor Lokasi</string>
+    <string name="export_json">Ekspor sebagai JSON</string>
+    <string name="export_txt">Ekspor sebagai TXT</string>
+    <string name="export_success">Berhasil diekspor</string>
+    <string name="export_failed">Gagal mengekspor</string>
+
+    <!-- More / Settings -->
+    <string name="more_settings">Pengaturan</string>
+    <string name="more_setup_guide">Panduan Setup Mock Location</string>
+    <string name="more_about">Tentang</string>
+    <string name="more_advanced">Pengaturan Lanjutan</string>
+    <string name="about_version">Versi %s</string>
+    <string name="about_description">GPS Mirage — Cara termudah untuk menguji dan mengelola mock location di Android.</string>
+
+    <!-- Validation -->
+    <string name="validation_latitude_range">Latitude harus berada di antara -90 dan 90.</string>
+    <string name="validation_longitude_range">Longitude harus berada di antara -180 dan 180.</string>
+    <string name="validation_name_required">Nama lokasi wajib diisi.</string>
+    <string name="validation_invalid_coordinate">Koordinat tidak valid.</string>
+
+    <!-- Error -->
+    <string name="error_mock_not_set">GPS Mirage belum ditetapkan sebagai aplikasi mock location.</string>
+    <string name="error_mock_not_set_message">Buka Opsi Pengembang dan pilih GPS Mirage.</string>
+    <string name="error_open_settings">Buka Pengaturan</string>
+    <string name="error_permission_required">Izin lokasi diperlukan.</string>
+    <string name="error_generic">Terjadi kesalahan. Silakan coba lagi.</string>
+
+    <!-- Actions -->
+    <string name="action_cancel">Batal</string>
+    <string name="action_confirm">Konfirmasi</string>
+    <string name="action_save">Simpan</string>
+    <string name="action_ok">OK</string>
+    <string name="action_manage">Kelola</string>
+    <string name="action_search">Cari</string>
+    <string name="action_close">Tutup</string>
+    <string name="action_retry">Coba Lagi</string>
+
+    <!-- Units -->
+    <string name="unit_meters">%s m</string>
+    <string name="unit_kmh">%s km/j</string>
+    <string name="unit_degrees">%s°</string>
+
+    <!-- Appearance -->
+    <string name="appearance_title">Tampilan &amp; Tema</string>
+    <string name="appearance_map_style_title">Gaya Lapisan Peta</string>
+    <string name="appearance_map_style_desc">Pilih penyedia ubin peta (tile source) yang ditampilkan pada layar peta utama.</string>
+    <string name="map_layer_google_roadmap">Google Maps (Roadmap)</string>
+    <string name="map_layer_google_roadmap_desc">Tampilan standar Google Maps dengan jalan raya, bangunan, dan label (Default).</string>
+    <string name="map_layer_google_satellite">Google Maps Satellite</string>
+    <string name="map_layer_google_satellite_desc">Foto citra satelit permukaan bumi definisi tinggi tanpa label.</string>
+    <string name="map_layer_google_hybrid">Google Maps Hybrid</string>
+    <string name="map_layer_google_hybrid_desc">Foto citra satelit dilengkapi lapisan nama jalan dan label lokasi.</string>
+    <string name="map_layer_osm_standard">OpenStreetMap Standard</string>
+    <string name="map_layer_osm_standard_desc">Gaya peta komunitas terbuka OpenStreetMap (Mapnik).</string>
+
+    <string name="appearance_statusbar_title">Notifikasi Status Bar</string>
+    <string name="appearance_statusbar_desc">Kelola tampilan ikon pada status bar atas Android saat layanan mock sedang aktif.</string>
+    <string name="appearance_statusbar_toggle">Tampilkan Ikon Status Bar</string>
+    <string name="appearance_statusbar_toggle_desc">Jika dinonaktifkan, mode senyap/minimal aktif pada Android 8+ sehingga ikon status bar di bagian atas bersih tanpa mematikan layanan mock.</string>
+
+    <string name="appearance_language_title">Bahasa Aplikasi</string>
+    <string name="appearance_language_desc">Ubah bahasa teks antarmuka secara instan tanpa perlu mengubah pengaturan bahasa sistem HP.</string>
+    <string name="language_indonesian">Bahasa Indonesia</string>
+    <string name="language_english">English</string>
+
+    <string name="appearance_theme_title">Tema Tampilan</string>
+    <string name="appearance_theme_desc">Pilihan tema visual terang, gelap, atau ikuti preferensi sistem perangkat.</string>
+    <string name="theme_follow_system">Ikuti Sistem</string>
+    <string name="theme_light">Mode Terang (Light)</string>
+    <string name="theme_dark">Mode Gelap (Dark)</string>
+</resources>

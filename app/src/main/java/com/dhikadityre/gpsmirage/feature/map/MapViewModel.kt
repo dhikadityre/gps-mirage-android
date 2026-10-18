@@ -55,6 +55,7 @@ class MapViewModel @Inject constructor(
         rewindCoordinator.setCenterAnchor(RadiusConfig.MAYAPADA_TOWER)
         observeMockState()
         observeRadiusConfig()
+        observeAppearanceConfig()
         observePreviewRequests()
         observeResetRequests()
         loadRecentLocations()
@@ -253,6 +254,14 @@ class MapViewModel @Inject constructor(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    private fun observeAppearanceConfig() {
+        viewModelScope.launch {
+            settingsRepository.appearanceConfig.collectLatest { appearance ->
+                _uiState.update { it.copy(mapLayerStyle = appearance.mapStyle) }
             }
         }
     }
