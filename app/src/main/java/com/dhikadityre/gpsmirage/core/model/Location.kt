@@ -10,7 +10,8 @@ data class Coordinate(
 
 enum class LocationType {
     CENTER_ANCHOR,
-    MOCK_TARGET
+    MOCK_TARGET,
+    NATIVE
 }
 
 /**

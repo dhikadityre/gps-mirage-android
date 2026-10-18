@@ -39,13 +39,15 @@ class LocationsViewModel @Inject constructor(
             combine(
                 locationRepository.getByTypeFlow(LocationType.CENTER_ANCHOR),
                 locationRepository.getByTypeFlow(LocationType.MOCK_TARGET),
+                locationRepository.getByTypeFlow(LocationType.NATIVE),
                 locationRepository.getAnchorsWithMocksFlow(),
                 folderRepository.getAllFlow()
-            ) { anchors, mockTargets, grouped, folders ->
+            ) { anchors, mockTargets, nativeLocs, grouped, folders ->
                 val duplicates = computeDuplicates(anchors, mockTargets)
                 _uiState.value.copy(
                     anchors = anchors,
                     mockTargets = mockTargets,
+                    nativeLocations = nativeLocs,
                     groupedList = grouped,
                     folders = folders,
                     duplicateAnchorMap = duplicates,

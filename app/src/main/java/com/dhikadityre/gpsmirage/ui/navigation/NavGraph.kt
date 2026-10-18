@@ -19,6 +19,7 @@ import com.dhikadityre.gpsmirage.feature.more.MoreScreen
 import com.dhikadityre.gpsmirage.feature.settings.MockSetupGuideScreen
 import com.dhikadityre.gpsmirage.feature.more.AboutScreen
 import com.dhikadityre.gpsmirage.feature.tools.baseline.EligibilityScreen
+import com.dhikadityre.gpsmirage.feature.tools.baseline.NativeGpsScreen
 import com.dhikadityre.gpsmirage.feature.tools.AlarmSchedulerScreen
 import com.dhikadityre.gpsmirage.feature.tools.AppearanceScreen
 import com.dhikadityre.gpsmirage.feature.tools.DefaultValuesScreen
@@ -172,7 +173,7 @@ fun GpsMirageNavHost(
         }
 
         composable(Screen.NativeGps.route) {
-            // Placeholder for Ticket 04 NativeGpsScreen
+            NativeGpsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

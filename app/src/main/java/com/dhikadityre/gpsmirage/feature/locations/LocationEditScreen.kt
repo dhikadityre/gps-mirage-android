@@ -235,6 +235,11 @@ fun LocationEditScreen(
                     onClick = { locationType = LocationType.CENTER_ANCHOR },
                     label = { Text("Center Anchor (Radius)") }
                 )
+                FilterChip(
+                    selected = locationType == LocationType.NATIVE,
+                    onClick = { locationType = LocationType.NATIVE },
+                    label = { Text("Native") }
+                )
             }
 
             activeProfile?.let { preset ->

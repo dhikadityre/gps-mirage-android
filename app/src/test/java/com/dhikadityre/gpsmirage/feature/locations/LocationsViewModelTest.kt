@@ -37,6 +37,7 @@ class LocationsViewModelTest {
 
     private val anchorsFlow = MutableStateFlow<List<Location>>(emptyList())
     private val mockTargetsFlow = MutableStateFlow<List<Location>>(emptyList())
+    private val nativeLocationsFlow = MutableStateFlow<List<Location>>(emptyList())
     private val groupedFlow = MutableStateFlow<List<AnchorWithMocks>>(emptyList())
     private val foldersFlow = MutableStateFlow<List<Folder>>(emptyList())
 
@@ -47,14 +48,22 @@ class LocationsViewModelTest {
         override fun getFavoritesFlow(): Flow<List<Location>> = MutableStateFlow(emptyList())
         override fun getByFolderFlow(folderId: Long): Flow<List<Location>> = MutableStateFlow(emptyList())
         override fun getByTypeFlow(type: LocationType): Flow<List<Location>> =
-            if (type == LocationType.CENTER_ANCHOR) anchorsFlow else mockTargetsFlow
+            when (type) {
+                LocationType.CENTER_ANCHOR -> anchorsFlow
+                LocationType.MOCK_TARGET -> mockTargetsFlow
+                LocationType.NATIVE -> nativeLocationsFlow
+            }
 
         override fun getChildrenOfAnchorFlow(anchorId: Long): Flow<List<Location>> = MutableStateFlow(emptyList())
         override fun getAnchorsWithMocksFlow(): Flow<List<AnchorWithMocks>> = groupedFlow
         override suspend fun getAll(): List<Location> = emptyList()
         override suspend fun getById(id: Long): Location? = null
         override suspend fun getByType(type: LocationType): List<Location> =
-            if (type == LocationType.CENTER_ANCHOR) anchorsFlow.value else mockTargetsFlow.value
+            when (type) {
+                LocationType.CENTER_ANCHOR -> anchorsFlow.value
+                LocationType.MOCK_TARGET -> mockTargetsFlow.value
+                LocationType.NATIVE -> nativeLocationsFlow.value
+            }
 
         override suspend fun getChildrenOfAnchor(anchorId: Long): List<Location> = emptyList()
         override suspend fun getFavorites(): List<Location> = emptyList()
@@ -242,5 +251,28 @@ class LocationsViewModelTest {
         val request = mapPreviewCoordinator.consumePreview()
         assertNotNull(request)
         assertEquals(mock.id, request?.target?.id)
+    }
+
+    @Test
+    fun `native locations are loaded into uiState and accessible via native tab`() = runTest(testDispatcher) {
+        val nativeLoc = Location(
+            id = 99L,
+            name = "Office Physical Hardware Baseline",
+            latitude = -6.200000,
+            longitude = 106.816666,
+            type = LocationType.NATIVE,
+            accuracy = 4.2f
+        )
+        nativeLocationsFlow.value = listOf(nativeLoc)
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.nativeLocations.size)
+        assertEquals(nativeLoc.id, viewModel.uiState.value.nativeLocations.first().id)
+        assertEquals(LocationType.NATIVE, viewModel.uiState.value.nativeLocations.first().type)
+
+        viewModel.onTabSelected(LocationsTab.NATIVE)
+        assertEquals(LocationsTab.NATIVE, viewModel.uiState.value.selectedTab)
     }
 }

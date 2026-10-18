@@ -137,12 +137,24 @@ fun LocationDetailScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Surface(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
-                        color = if (loc.type == LocationType.CENTER_ANCHOR) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        color = when (loc.type) {
+                            LocationType.CENTER_ANCHOR -> MaterialTheme.colorScheme.primaryContainer
+                            LocationType.MOCK_TARGET -> MaterialTheme.colorScheme.secondaryContainer
+                            LocationType.NATIVE -> MaterialTheme.colorScheme.tertiaryContainer
+                        }
                     ) {
                         Text(
-                            text = if (loc.type == LocationType.CENTER_ANCHOR) "Center Anchor (Radius Acuan)" else "Mock Target",
+                            text = when (loc.type) {
+                                LocationType.CENTER_ANCHOR -> "Center Anchor (Radius Acuan)"
+                                LocationType.MOCK_TARGET -> "Mock Target"
+                                LocationType.NATIVE -> "Native Benchmark"
+                            },
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (loc.type == LocationType.CENTER_ANCHOR) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                            color = when (loc.type) {
+                                LocationType.CENTER_ANCHOR -> MaterialTheme.colorScheme.onPrimaryContainer
+                                LocationType.MOCK_TARGET -> MaterialTheme.colorScheme.onSecondaryContainer
+                                LocationType.NATIVE -> MaterialTheme.colorScheme.onTertiaryContainer
+                            },
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }

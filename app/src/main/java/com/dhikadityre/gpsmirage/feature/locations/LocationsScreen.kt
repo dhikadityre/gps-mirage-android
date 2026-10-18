@@ -86,8 +86,11 @@ fun LocationsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Tab Row: Anchors, Mock Targets, Grouped
-            TabRow(selectedTabIndex = uiState.selectedTab.ordinal) {
+            // Tab Row: Anchors, Mock Targets, Grouped, Native
+            ScrollableTabRow(
+                selectedTabIndex = uiState.selectedTab.ordinal,
+                edgePadding = 16.dp
+            ) {
                 Tab(
                     selected = uiState.selectedTab == LocationsTab.ANCHORS,
                     onClick = { viewModel.onTabSelected(LocationsTab.ANCHORS) },
@@ -102,6 +105,11 @@ fun LocationsScreen(
                     selected = uiState.selectedTab == LocationsTab.GROUPED,
                     onClick = { viewModel.onTabSelected(LocationsTab.GROUPED) },
                     text = { Text("Grouped (${uiState.groupedList.size})") }
+                )
+                Tab(
+                    selected = uiState.selectedTab == LocationsTab.NATIVE,
+                    onClick = { viewModel.onTabSelected(LocationsTab.NATIVE) },
+                    text = { Text("Native (${uiState.nativeLocations.size})") }
                 )
             }
 
@@ -298,6 +306,51 @@ fun LocationsScreen(
                                     },
                                     onToggleFavorite = { loc -> viewModel.onToggleFavorite(loc.id, loc.isFavorite) },
                                     onDeleteLocation = { loc -> viewModel.onDeleteRequest(loc) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                LocationsTab.NATIVE -> {
+                    val filteredNatives = filterLocations(
+                        list = if (uiState.isSearchActive && uiState.searchQuery.isNotBlank()) {
+                            uiState.searchResults.filter { it.type == LocationType.NATIVE }
+                        } else {
+                            uiState.nativeLocations
+                        },
+                        favoriteOnly = uiState.isFilterFavoriteOnly,
+                        folderId = uiState.selectedFolderId
+                    )
+
+                    if (filteredNatives.isEmpty()) {
+                        EmptyLocationState(
+                            title = "No Native Locations yet",
+                            message = "Capture and save your unmocked physical hardware GPS baseline coordinates.",
+                            buttonText = "Open Map",
+                            onAction = onNavigateToMap
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredNatives, key = { it.id }) { nativeLocation ->
+                                LocationCardItem(
+                                    location = nativeLocation,
+                                    tagLabel = "Native",
+                                    tagContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                    tagContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    radiusText = nativeLocation.radiusMeters?.let { "Radius ${it.toInt()}m" },
+                                    duplicateAnchor = null,
+                                    onClick = { onLocationClick(nativeLocation.id) },
+                                    onToggleFavorite = { viewModel.onToggleFavorite(nativeLocation.id, nativeLocation.isFavorite) },
+                                    onDelete = { viewModel.onDeleteRequest(nativeLocation) },
+                                    onPreview = {
+                                        viewModel.onPreviewLocation(nativeLocation, parentAnchor = null, onNavigateToMap)
+                                    },
+                                    onLinkToAnchor = {}
                                 )
                             }
                         }

@@ -7,13 +7,15 @@ import com.dhikadityre.gpsmirage.core.model.Location
 enum class LocationsTab {
     ANCHORS,
     MOCK_TARGETS,
-    GROUPED
+    GROUPED,
+    NATIVE
 }
 
 data class LocationsUiState(
     val selectedTab: LocationsTab = LocationsTab.ANCHORS,
     val anchors: List<Location> = emptyList(),
     val mockTargets: List<Location> = emptyList(),
+    val nativeLocations: List<Location> = emptyList(),
     val groupedList: List<AnchorWithMocks> = emptyList(),
     val folders: List<Folder> = emptyList(),
     val isFilterFavoriteOnly: Boolean = false,

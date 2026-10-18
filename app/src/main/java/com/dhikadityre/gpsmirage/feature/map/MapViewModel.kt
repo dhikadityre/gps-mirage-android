@@ -222,6 +222,34 @@ class MapViewModel @Inject constructor(
                     }
                 }
             }
+            LocationType.NATIVE -> {
+                val updatedConfig = if (target.radiusMeters != null) {
+                    RadiusConfig(
+                        isEnabled = true,
+                        anchor = targetCoord,
+                        radiusMeters = target.radiusMeters
+                    )
+                } else {
+                    _uiState.value.radiusConfig.copy(isEnabled = false)
+                }
+                rewindCoordinator.onMapMoved(targetCoord)
+
+                _uiState.update { ui ->
+                    ui.copy(
+                        previewSnapshot = currentSnapshot,
+                        previewingLocationName = target.name,
+                        radiusConfig = updatedConfig,
+                        selectedCoordinate = targetCoord,
+                        selectedLocationName = target.name,
+                        resolvedShortAddress = target.name,
+                        isResolvingAddress = false,
+                        distanceToAnchorMeters = null,
+                        isWithinRadius = true,
+                        isRewindEnabled = true,
+                        event = MapEvent.AnimateCamera(targetCoord)
+                    )
+                }
+            }
         }
     }
 
