@@ -110,6 +110,7 @@ fun GpsMirageNavHost(
         composable(Screen.Tools.route) {
             ToolsScreen(
                 onNavigateToEligibility = { navController.navigate(Screen.Eligibility.route) },
+                onNavigateToNativeGps = { navController.navigate(Screen.NativeGps.route) },
                 onNavigateToSetupGuide = { navController.navigate(Screen.MockSetupGuide.route) },
                 onNavigateToGeofenceRadius = { navController.navigate(Screen.GeofenceRadius.route) },
                 onNavigateToDefaultValues = { navController.navigate(Screen.DefaultValues.route) },
@@ -168,6 +169,10 @@ fun GpsMirageNavHost(
 
         composable(Screen.About.route) {
             AboutScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.NativeGps.route) {
+            // Placeholder for Ticket 04 NativeGpsScreen
         }
     }
 }

@@ -13,7 +13,15 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Tune
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun ToolsScreen(
     onNavigateToEligibility: () -> Unit,
+    onNavigateToNativeGps: () -> Unit,
     onNavigateToSetupGuide: () -> Unit,
     onNavigateToGeofenceRadius: () -> Unit,
     onNavigateToDefaultValues: () -> Unit,
@@ -41,6 +50,7 @@ fun ToolsScreen(
     onHardReset: () -> Unit = { viewModel.onHardReset() }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var showResetDialog by remember { mutableStateOf(false) }
 
@@ -148,6 +158,99 @@ fun ToolsScreen(
         )
     }
 
+    if (uiState.showMockRunningWarning) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissMockRunningWarning() },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(
+                    text = "Fake GPS Sedang Aktif",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Fake GPS sedang berjalan di latar belakang. Untuk membaca koordinat fisik riil dari hardware perangkat, Anda harus melakukan Hard Reset terlebih dahulu agar test provider dilepas dan GPS fisik dipulihkan.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.confirmHardResetFromNativeGps() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Hard Reset GPS")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissMockRunningWarning() }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
+    if (uiState.showGoogleMapsVerification) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissGoogleMapsVerification() },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Map,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "Verifikasi Lokasi Asli",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "GPS fisik berhasil dipulihkan! Apakah Anda ingin membuka Google Maps sekarang untuk memverifikasi lokasi fisik Anda?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(
+                            text = "Otomatis ditutup dalam ${uiState.verificationCountdown} detik...",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.dismissGoogleMapsVerification()
+                        launchGoogleMaps(context)
+                    }
+                ) {
+                    Text("Buka Google Maps")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissGoogleMapsVerification() }) {
+                    Text("Tidak")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -181,6 +284,18 @@ fun ToolsScreen(
                 badge = "Diagnostic",
                 icon = Icons.Default.VerifiedUser,
                 onClick = onNavigateToEligibility
+            )
+
+            ToolItemCard(
+                title = "Native GPS",
+                description = "Simulasi pembacaan data GPS fisik asli perangkat (Lat, Lng, Akurasi, Altitude, Speed, Bearing) tanpa mock.",
+                badge = "Hardware",
+                icon = Icons.Default.GpsFixed,
+                onClick = {
+                    viewModel.onNativeGpsClicked(
+                        onNavigate = onNavigateToNativeGps
+                    )
+                }
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -366,4 +481,18 @@ private fun ToolItemCard(
             }
         }
     }
+}
+
+private fun launchGoogleMaps(context: Context) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=my+location")).apply {
+            setPackage("com.google.android.apps.maps")
+        }
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        try {
+            val fallbackIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0"))
+            context.startActivity(fallbackIntent)
+        } catch (_: Exception) {}
+    } catch (_: Exception) {}
 }

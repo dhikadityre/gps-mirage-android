@@ -119,4 +119,56 @@ class ToolsViewModelTest {
         viewModel.clearMessage()
         assertNull(viewModel.uiState.value.message)
     }
+
+    @Test
+    fun `onNativeGpsClicked triggers showMockRunningWarning when mock is running`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        var navigated = false
+
+        viewModel.onNativeGpsClicked { navigated = true }
+        advanceUntilIdle()
+
+        assertFalse("Should not navigate when mock is running", navigated)
+        assertTrue(viewModel.uiState.value.showMockRunningWarning)
+    }
+
+    @Test
+    fun `dismissMockRunningWarning closes warning dialog and keeps user on tools`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.onNativeGpsClicked { }
+        assertTrue(viewModel.uiState.value.showMockRunningWarning)
+
+        viewModel.dismissMockRunningWarning()
+        assertFalse(viewModel.uiState.value.showMockRunningWarning)
+    }
+
+    @Test
+    fun `confirmHardResetFromNativeGps triggers hard reset and starts 3s countdown`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.onNativeGpsClicked { }
+
+        viewModel.confirmHardResetFromNativeGps()
+        assertFalse(viewModel.uiState.value.showMockRunningWarning)
+        assertTrue(viewModel.uiState.value.showGoogleMapsVerification)
+        assertEquals(3, viewModel.uiState.value.verificationCountdown)
+        assertEquals(1, mockLocationManager.stopCount)
+        assertFalse(viewModel.uiState.value.isMockRunning)
+
+        // Advance until all 3 seconds of countdown finish
+        advanceUntilIdle()
+        assertFalse("Verification dialog should auto-dismiss after timeout", viewModel.uiState.value.showGoogleMapsVerification)
+    }
+
+    @Test
+    fun `when mock is not running, onNativeGpsClicked navigates immediately`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.onSoftReset()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isMockRunning)
+
+        var navigated = false
+        viewModel.onNativeGpsClicked { navigated = true }
+        assertTrue("Should navigate directly when mock is stopped", navigated)
+        assertFalse(viewModel.uiState.value.showMockRunningWarning)
+    }
 }

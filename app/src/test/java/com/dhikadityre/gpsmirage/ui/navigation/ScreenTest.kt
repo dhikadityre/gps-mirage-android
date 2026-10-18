@@ -17,7 +17,8 @@ class ScreenTest {
             Screen.DefaultValues.route,
             Screen.AlarmScheduler.route,
             Screen.AppearanceSettings.route,
-            Screen.Eligibility.route
+            Screen.Eligibility.route,
+            Screen.NativeGps.route
         )
 
         assertEquals("All tools routes must be unique", toolsRoutes.size, toolsRoutes.distinct().size)
@@ -50,5 +51,6 @@ class ScreenTest {
         assertEquals("mock_setup_guide", Screen.MockSetupGuide.route)
         assertEquals("about", Screen.About.route)
         assertEquals("appearance_settings", Screen.AppearanceSettings.route)
+        assertEquals("native_gps", Screen.NativeGps.route)
     }
 }

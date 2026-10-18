@@ -35,6 +35,7 @@ sealed class Screen(val route: String) {
     object AlarmScheduler : Screen("alarm_scheduler")
     object AppearanceSettings : Screen("appearance_settings")
     object Eligibility : Screen("eligibility")
+    object NativeGps : Screen("native_gps")
 
     // Shared & More sub-screens
     object MockSetupGuide : Screen("mock_setup_guide")

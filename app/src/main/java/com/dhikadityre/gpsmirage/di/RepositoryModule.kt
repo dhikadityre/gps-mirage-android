@@ -59,4 +59,10 @@ abstract class RepositoryModule {
     abstract fun bindMockEligibilityChecker(
         impl: com.dhikadityre.gpsmirage.data.baseline.MockEligibilityCheckerImpl
     ): com.dhikadityre.gpsmirage.domain.baseline.MockEligibilityChecker
+
+    @Binds
+    @Singleton
+    abstract fun bindNativeLocationProvider(
+        impl: com.dhikadityre.gpsmirage.data.baseline.NativeLocationProviderImpl
+    ): com.dhikadityre.gpsmirage.domain.baseline.NativeLocationProvider
 }
