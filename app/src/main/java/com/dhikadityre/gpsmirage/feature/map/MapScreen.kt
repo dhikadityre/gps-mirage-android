@@ -29,10 +29,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -175,7 +175,7 @@ fun MapScreen(
                     modifier = Modifier.padding(bottom = 8.dp),
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    Icon(Icons.Default.List, contentDescription = "Quick locations")
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Quick locations")
                 }
                 FloatingActionButton(
                     onClick = { showEnterCoordSheet = true },
@@ -328,7 +328,12 @@ private fun OsmMapView(
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+            Configuration.getInstance().apply {
+                load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+                userAgentValue = ctx.packageName
+                osmdroidBasePath = java.io.File(ctx.cacheDir, "osmdroid")
+                osmdroidTileCache = java.io.File(ctx.cacheDir, "osmdroid/tiles")
+            }
             MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setBuiltInZoomControls(false)

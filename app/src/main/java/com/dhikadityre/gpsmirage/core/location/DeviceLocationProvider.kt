@@ -3,12 +3,16 @@ package com.dhikadityre.gpsmirage.core.location
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
+import android.os.Bundle
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.dhikadityre.gpsmirage.core.model.Coordinate
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -79,6 +83,52 @@ class DeviceLocationProviderImpl @Inject constructor(
             }
         }
 
+        // 3. Fallback to single location update on legacy Android (API < 30 / Marshmallow)
+        if (bestLocation == null) {
+            bestLocation = requestSingleUpdateFallback(lm)
+        }
+
         return bestLocation?.let { Coordinate(it.latitude, it.longitude) }
     }
+
+    @SuppressLint("MissingPermission")
+    @Suppress("DEPRECATION")
+    private suspend fun requestSingleUpdateFallback(lm: LocationManager): Location? {
+        val provider = when {
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+            lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+            else -> return null
+        }
+
+        return withTimeoutOrNull(4000L) {
+            suspendCancellableCoroutine { continuation ->
+                val listener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        try {
+                            lm.removeUpdates(this)
+                        } catch (_: Exception) {}
+                        if (continuation.isActive) continuation.resume(location)
+                    }
+
+                    @Deprecated("Deprecated in Java")
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+
+                continuation.invokeOnCancellation {
+                    try {
+                        lm.removeUpdates(listener)
+                    } catch (_: Exception) {}
+                }
+
+                try {
+                    lm.requestSingleUpdate(provider, listener, Looper.getMainLooper())
+                } catch (e: Exception) {
+                    if (continuation.isActive) continuation.resume(null)
+                }
+            }
+        }
+    }
 }
+

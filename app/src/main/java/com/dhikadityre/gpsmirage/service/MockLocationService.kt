@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.location.Criteria
 import android.location.Location
 import android.location.LocationManager
@@ -14,6 +15,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import com.dhikadityre.dev.tools.R
 import com.dhikadityre.gpsmirage.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -117,7 +119,16 @@ class MockLocationService : Service() {
     }
 
     private fun startMocking() {
-        startForeground(NOTIFICATION_ID, buildNotification())
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            buildNotification(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            } else {
+                0
+            }
+        )
         setupMockProvider()
 
         mockJob?.cancel()
