@@ -18,6 +18,9 @@ import com.dhikadityre.gpsmirage.feature.map.MapScreen
 import com.dhikadityre.gpsmirage.feature.more.MoreScreen
 import com.dhikadityre.gpsmirage.feature.settings.MockSetupGuideScreen
 import com.dhikadityre.gpsmirage.feature.settings.SettingsScreen
+import com.dhikadityre.gpsmirage.feature.tools.AlarmSchedulerScreen
+import com.dhikadityre.gpsmirage.feature.tools.AppearanceScreen
+import com.dhikadityre.gpsmirage.feature.tools.DefaultValuesScreen
 import com.dhikadityre.gpsmirage.feature.tools.ToolsScreen
 
 @Composable
@@ -44,6 +47,9 @@ fun GpsMirageNavHost(
                 onLocationClick = { id ->
                     navController.navigate(Screen.LocationDetail.route(id))
                 },
+                onAddLocation = {
+                    navController.navigate(Screen.LocationEdit.route(0L))
+                },
                 onNavigateToMap = {
                     navController.navigate(Screen.Map.route) {
                         popUpTo(Screen.Map.route) { inclusive = true }
@@ -60,7 +66,12 @@ fun GpsMirageNavHost(
             LocationDetailScreen(
                 locationId = locationId,
                 onEdit = { navController.navigate(Screen.LocationEdit.route(locationId)) },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigateToMap = {
+                    navController.navigate(Screen.Map.route) {
+                        popUpTo(Screen.Map.route) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -96,10 +107,33 @@ fun GpsMirageNavHost(
 
         composable(Screen.Tools.route) {
             ToolsScreen(
+                onNavigateToSetupGuide = { navController.navigate(Screen.MockSetupGuide.route) },
+                onNavigateToGeofenceRadius = { navController.navigate(Screen.GeofenceRadius.route) },
+                onNavigateToDefaultValues = { navController.navigate(Screen.DefaultValues.route) },
                 onNavigateToGenerator = { navController.navigate(Screen.Generator.route) },
+                onNavigateToAlarmScheduler = { navController.navigate(Screen.AlarmScheduler.route) },
+                onNavigateToAppearance = { navController.navigate(Screen.AppearanceSettings.route) },
                 onNavigateToImport = { navController.navigate(Screen.Import.route) },
-                onNavigateToExport = { navController.navigate(Screen.Export.route) }
+                onNavigateToExport = { navController.navigate(Screen.Export.route) },
+                onSoftReset = { /* Handled in Ticket 02 */ },
+                onHardReset = { /* Handled in Ticket 02 */ }
             )
+        }
+
+        composable(Screen.GeofenceRadius.route) {
+            SettingsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.DefaultValues.route) {
+            DefaultValuesScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AlarmScheduler.route) {
+            AlarmSchedulerScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AppearanceSettings.route) {
+            AppearanceScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.Generator.route) {

@@ -30,6 +30,10 @@ sealed class Screen(val route: String) {
     object Generator : Screen("generator")
     object Import : Screen("import")
     object Export : Screen("export")
+    object GeofenceRadius : Screen("geofence_radius")
+    object DefaultValues : Screen("default_values")
+    object AlarmScheduler : Screen("alarm_scheduler")
+    object AppearanceSettings : Screen("appearance_settings")
 
     // More sub-screens
     object Settings : Screen("settings")
