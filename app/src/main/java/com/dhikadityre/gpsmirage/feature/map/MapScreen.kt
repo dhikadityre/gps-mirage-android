@@ -58,6 +58,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -171,24 +172,7 @@ fun MapScreen(
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                FloatingActionButton(
-                    onClick = { viewModel.toggleQuickLocations() },
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Quick locations")
-                }
-                FloatingActionButton(
-                    onClick = { showEnterCoordSheet = true },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Enter coordinates")
-                }
-            }
-        }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -213,6 +197,33 @@ fun MapScreen(
                     isResolvingAddress = uiState.isResolvingAddress,
                     resolvedShortAddress = uiState.resolvedShortAddress
                 )
+            }
+
+            if (!uiState.isMockActive) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 12.dp, end = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SmallFloatingActionButton(
+                        onClick = { viewModel.toggleQuickLocations() },
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Quick locations")
+                    }
+                    SmallFloatingActionButton(
+                        onClick = { showEnterCoordSheet = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Enter coordinates")
+                    }
+                }
             }
 
             val configuration = LocalConfiguration.current
