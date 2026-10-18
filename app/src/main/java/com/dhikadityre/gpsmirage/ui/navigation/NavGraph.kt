@@ -114,9 +114,7 @@ fun GpsMirageNavHost(
                 onNavigateToAlarmScheduler = { navController.navigate(Screen.AlarmScheduler.route) },
                 onNavigateToAppearance = { navController.navigate(Screen.AppearanceSettings.route) },
                 onNavigateToImport = { navController.navigate(Screen.Import.route) },
-                onNavigateToExport = { navController.navigate(Screen.Export.route) },
-                onSoftReset = { /* Handled in Ticket 02 */ },
-                onHardReset = { /* Handled in Ticket 02 */ }
+                onNavigateToExport = { navController.navigate(Screen.Export.route) }
             )
         }
 

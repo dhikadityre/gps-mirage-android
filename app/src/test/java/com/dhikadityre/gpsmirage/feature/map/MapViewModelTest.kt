@@ -10,6 +10,8 @@ import com.dhikadityre.gpsmirage.core.geo.ReverseGeocoder
 import com.dhikadityre.gpsmirage.core.model.GeocodeResult
 import com.dhikadityre.gpsmirage.domain.location.MockLocationManager
 import com.dhikadityre.gpsmirage.domain.location.MockStartResult
+import com.dhikadityre.gpsmirage.domain.location.MapResetCoordinator
+import com.dhikadityre.gpsmirage.domain.location.ResetMode
 import com.dhikadityre.gpsmirage.domain.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,6 +36,10 @@ import com.dhikadityre.gpsmirage.core.geo.GeoEngineImpl
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 
+import com.dhikadityre.gpsmirage.core.model.AnchorWithMocks
+import com.dhikadityre.gpsmirage.core.model.LocationType
+import com.dhikadityre.gpsmirage.domain.location.MapPreviewCoordinator
+import com.dhikadityre.gpsmirage.domain.location.MapPreviewRequest
 import com.dhikadityre.gpsmirage.domain.location.RewindCoordinator
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,8 +52,13 @@ class MapViewModelTest {
         override fun getAllFlow(): Flow<List<Location>> = emptyFlow()
         override fun getFavoritesFlow(): Flow<List<Location>> = emptyFlow()
         override fun getByFolderFlow(folderId: Long): Flow<List<Location>> = emptyFlow()
+        override fun getByTypeFlow(type: LocationType): Flow<List<Location>> = emptyFlow()
+        override fun getChildrenOfAnchorFlow(anchorId: Long): Flow<List<Location>> = emptyFlow()
+        override fun getAnchorsWithMocksFlow(): Flow<List<AnchorWithMocks>> = emptyFlow()
         override suspend fun getAll(): List<Location> = emptyList()
         override suspend fun getById(id: Long): Location? = null
+        override suspend fun getByType(type: LocationType): List<Location> = emptyList()
+        override suspend fun getChildrenOfAnchor(anchorId: Long): List<Location> = emptyList()
         override suspend fun getFavorites(): List<Location> = emptyList()
         override suspend fun getByFolder(folderId: Long): List<Location> = emptyList()
         override suspend fun getRecent(limit: Int): List<Location> = emptyList()
@@ -61,9 +72,11 @@ class MapViewModelTest {
         override suspend fun update(location: Location) {}
         override suspend fun updateFavorite(id: Long, isFavorite: Boolean) {}
         override suspend fun updateFolder(id: Long, folderId: Long?) {}
+        override suspend fun updateParentAnchor(id: Long, parentAnchorId: Long?) {}
         override suspend fun delete(id: Long) {}
         override suspend fun isDuplicate(name: String, latitude: Double, longitude: Double): Boolean = false
     }
+
 
     private class RecordingMockLocationManager : MockLocationManager {
         private val _isRunning = MutableStateFlow(false)
@@ -142,7 +155,9 @@ class MapViewModelTest {
 
     private fun createViewModel(
         reverseGeocoder: ReverseGeocoder = fakeReverseGeocoder,
-        rewindCoordinator: RewindCoordinator = RewindCoordinator()
+        rewindCoordinator: RewindCoordinator = RewindCoordinator(),
+        mapPreviewCoordinator: MapPreviewCoordinator = MapPreviewCoordinator(),
+        mapResetCoordinator: MapResetCoordinator = MapResetCoordinator()
     ): MapViewModel {
         return MapViewModel(
             locationRepository = fakeLocationRepository,
@@ -151,8 +166,158 @@ class MapViewModelTest {
             settingsRepository = fakeSettingsRepository,
             geoEngine = geoEngine,
             reverseGeocoder = reverseGeocoder,
-            rewindCoordinator = rewindCoordinator
+            rewindCoordinator = rewindCoordinator,
+            mapPreviewCoordinator = mapPreviewCoordinator,
+            mapResetCoordinator = mapResetCoordinator
         )
+    }
+
+    @Test
+    fun `preview Center Anchor configures radius ON and sets anchor and pinpoint`() = runTest(testDispatcher) {
+        val coordinator = MapPreviewCoordinator()
+        val viewModel = createViewModel(mapPreviewCoordinator = coordinator)
+        advanceUntilIdle()
+
+        val anchorLocation = Location(
+            id = 10L,
+            name = "Test Anchor Area",
+            latitude = -6.200000,
+            longitude = 106.800000,
+            type = LocationType.CENTER_ANCHOR,
+            radiusMeters = 750.0
+        )
+
+        coordinator.requestPreview(anchorLocation)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue("Radius must be enabled for Center Anchor preview", state.radiusConfig.isEnabled)
+        assertEquals(Coordinate(-6.200000, 106.800000), state.radiusConfig.anchor)
+        assertEquals(750.0, state.radiusConfig.radiusMeters, 0.001)
+        assertEquals(Coordinate(-6.200000, 106.800000), state.selectedCoordinate)
+        assertTrue(state.isWithinRadius)
+    }
+
+    @Test
+    fun `preview standalone Mock Target disables radius and sets pinpoint`() = runTest(testDispatcher) {
+        val coordinator = MapPreviewCoordinator()
+        val viewModel = createViewModel(mapPreviewCoordinator = coordinator)
+        advanceUntilIdle()
+
+        val mockLocation = Location(
+            id = 20L,
+            name = "Test Standalone Mock",
+            latitude = -7.000000,
+            longitude = 110.000000,
+            type = LocationType.MOCK_TARGET
+        )
+
+        coordinator.requestPreview(mockLocation)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse("Radius must be disabled for standalone Mock Target preview", state.radiusConfig.isEnabled)
+        assertEquals(Coordinate(-7.000000, 110.000000), state.selectedCoordinate)
+    }
+
+    @Test
+    fun `preview Sub-Mock Target enables radius with parent anchor and sets pinpoint to child mock`() = runTest(testDispatcher) {
+        val coordinator = MapPreviewCoordinator()
+        val viewModel = createViewModel(mapPreviewCoordinator = coordinator)
+        advanceUntilIdle()
+
+        val parentAnchor = Location(
+            id = 30L,
+            name = "Office Anchor",
+            latitude = -6.200000,
+            longitude = 106.800000,
+            type = LocationType.CENTER_ANCHOR,
+            radiusMeters = 1000.0
+        )
+        val childMock = Location(
+            id = 31L,
+            name = "Office Desk 4",
+            latitude = -6.200100,
+            longitude = 106.800100,
+            type = LocationType.MOCK_TARGET,
+            parentAnchorId = 30L
+        )
+
+        coordinator.requestPreview(target = childMock, parentAnchor = parentAnchor)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue("Radius must be enabled for sub-mock preview", state.radiusConfig.isEnabled)
+        assertEquals(Coordinate(-6.200000, 106.800000), state.radiusConfig.anchor)
+        assertEquals(Coordinate(-6.200100, 106.800100), state.selectedCoordinate)
+        assertTrue("Child mock inside radius must be valid", state.isWithinRadius)
+    }
+
+    @Test
+    fun `preview Center Anchor followed by rewind performs unpreview and restores previous state`() = runTest(testDispatcher) {
+        val coordinator = MapPreviewCoordinator()
+        val viewModel = createViewModel(mapPreviewCoordinator = coordinator)
+        advanceUntilIdle()
+
+        val initialCoordinate = viewModel.uiState.value.selectedCoordinate
+        val initialConfig = viewModel.uiState.value.radiusConfig
+
+        val anchorLocation = Location(
+            id = 10L,
+            name = "Previewed Area",
+            latitude = -6.111111,
+            longitude = 106.222222,
+            type = LocationType.CENTER_ANCHOR,
+            radiusMeters = 800.0
+        )
+
+        coordinator.requestPreview(anchorLocation)
+        advanceUntilIdle()
+
+        // Verify preview active
+        assertEquals(anchorLocation.name, viewModel.uiState.value.previewingLocationName)
+        assertNotNull(viewModel.uiState.value.previewSnapshot)
+        assertTrue(viewModel.uiState.value.isRewindEnabled)
+        assertEquals(Coordinate(-6.111111, 106.222222), viewModel.uiState.value.selectedCoordinate)
+
+        // Perform rewind -> must unpreview
+        viewModel.onRewindClick()
+        advanceUntilIdle()
+
+        val restoredState = viewModel.uiState.value
+        assertNull(restoredState.previewingLocationName)
+        assertNull(restoredState.previewSnapshot)
+        assertEquals(initialCoordinate, restoredState.selectedCoordinate)
+        assertEquals(initialConfig.anchor, restoredState.radiusConfig.anchor)
+        assertEquals(initialConfig.radiusMeters, restoredState.radiusConfig.radiusMeters, 0.001)
+    }
+
+    @Test
+    fun `commit preview on startMock persists radiusConfig permanently`() = runTest(testDispatcher) {
+        val coordinator = MapPreviewCoordinator()
+        val viewModel = createViewModel(mapPreviewCoordinator = coordinator)
+        advanceUntilIdle()
+
+        val anchorLocation = Location(
+            id = 10L,
+            name = "Office Anchor",
+            latitude = -6.111111,
+            longitude = 106.222222,
+            type = LocationType.CENTER_ANCHOR,
+            radiusMeters = 800.0
+        )
+
+        coordinator.requestPreview(anchorLocation)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.previewSnapshot != null)
+
+        viewModel.onStartMock()
+        advanceUntilIdle()
+
+        // Preview should be committed and snapshot cleared
+        assertNull(viewModel.uiState.value.previewSnapshot)
+        assertNull(viewModel.uiState.value.previewingLocationName)
     }
 
     @Test
@@ -833,6 +998,64 @@ class MapViewModelTest {
         assertEquals(mockCoord, viewModel.uiState.value.selectedCoordinate)
         assertFalse("Should auto-unlock on rewind to mock location", viewModel.uiState.value.isPositionLocked)
         assertFalse("Should be disabled once final target reached", viewModel.uiState.value.isRewindEnabled)
+    }
+
+    @Test
+    fun `soft reset stops mock service but preserves selected coordinate and position lock`() = runTest(testDispatcher) {
+        val resetCoordinator = MapResetCoordinator()
+        val viewModel = createViewModel(mapResetCoordinator = resetCoordinator)
+        advanceUntilIdle()
+
+        val target = Coordinate(-6.2140, 106.8205)
+        viewModel.onMapCenterMoved(target.latitude, target.longitude)
+        advanceUntilIdle()
+        viewModel.onStartMock()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isMockActive)
+
+        viewModel.togglePositionLock()
+        assertTrue(viewModel.uiState.value.isPositionLocked)
+
+        // Trigger Soft Reset via MapResetCoordinator
+        resetCoordinator.requestReset(ResetMode.SOFT)
+        advanceUntilIdle()
+
+        // Mock must be stopped
+        assertFalse("Mock should be stopped after soft reset", viewModel.uiState.value.isMockActive)
+        assertEquals("Selected coordinate must be preserved on soft reset", target, viewModel.uiState.value.selectedCoordinate)
+        assertTrue("Position lock must be preserved on soft reset", viewModel.uiState.value.isPositionLocked)
+        assertTrue("Event should be ShowSnackbar", viewModel.uiState.value.event is MapEvent.ShowSnackbar)
+    }
+
+    @Test
+    fun `hard reset stops mock, resets map to Center Anchor, clears lock and rewind`() = runTest(testDispatcher) {
+        val resetCoordinator = MapResetCoordinator()
+        val rewindCoord = RewindCoordinator()
+        val viewModel = createViewModel(
+            rewindCoordinator = rewindCoord,
+            mapResetCoordinator = resetCoordinator
+        )
+        advanceUntilIdle()
+
+        val target = Coordinate(-6.2140, 106.8205)
+        viewModel.onMapCenterMoved(target.latitude, target.longitude)
+        advanceUntilIdle()
+        viewModel.onStartMock()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isMockActive)
+
+        viewModel.togglePositionLock()
+        assertTrue(viewModel.uiState.value.isPositionLocked)
+
+        // Trigger Hard Reset
+        resetCoordinator.requestReset(ResetMode.HARD)
+        advanceUntilIdle()
+
+        assertFalse("Mock should be stopped after hard reset", viewModel.uiState.value.isMockActive)
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, viewModel.uiState.value.selectedCoordinate)
+        assertFalse("Lock must be cleared on hard reset", viewModel.uiState.value.isPositionLocked)
+        assertFalse("Rewind must be disabled on hard reset", viewModel.uiState.value.isRewindEnabled)
+        assertTrue("Event should be ShowSnackbar", viewModel.uiState.value.event is MapEvent.ShowSnackbar)
     }
 }
 

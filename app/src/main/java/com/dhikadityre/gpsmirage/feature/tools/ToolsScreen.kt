@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,10 +36,20 @@ fun ToolsScreen(
     onNavigateToAppearance: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToExport: () -> Unit,
-    onSoftReset: () -> Unit = {},
-    onHardReset: () -> Unit = {}
+    viewModel: ToolsViewModel = hiltViewModel(),
+    onSoftReset: () -> Unit = { viewModel.onSoftReset() },
+    onHardReset: () -> Unit = { viewModel.onHardReset() }
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     var showResetDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.message) {
+        uiState.message?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearMessage()
+        }
+    }
 
     if (showResetDialog) {
         AlertDialog(
@@ -146,7 +158,8 @@ fun ToolsScreen(
                     )
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier

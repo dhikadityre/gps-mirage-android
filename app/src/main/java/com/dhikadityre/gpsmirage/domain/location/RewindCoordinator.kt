@@ -41,6 +41,16 @@ class RewindCoordinator @Inject constructor() {
         this.isPositionLocked = false
     }
 
+    fun reset() {
+        this.lastLockCoordinate = null
+        this.lastMockCoordinate = null
+        this.isPositionLocked = false
+        this.hasRewoundToLock = false
+        this.hasExecutedFinalStep = false
+        this.hasReachedFinalTarget = false
+        this.currentCoordinate = centerAnchor
+    }
+
     fun onMockStarted(coord: Coordinate) {
         this.lastMockCoordinate = coord
         this.hasExecutedFinalStep = false
