@@ -21,6 +21,7 @@ import com.dhikadityre.gpsmirage.feature.settings.SettingsScreen
 import com.dhikadityre.gpsmirage.feature.tools.AlarmSchedulerScreen
 import com.dhikadityre.gpsmirage.feature.tools.AppearanceScreen
 import com.dhikadityre.gpsmirage.feature.tools.DefaultValuesScreen
+import com.dhikadityre.gpsmirage.feature.tools.GeofenceRadiusScreen
 import com.dhikadityre.gpsmirage.feature.tools.ToolsScreen
 
 @Composable
@@ -119,7 +120,10 @@ fun GpsMirageNavHost(
         }
 
         composable(Screen.GeofenceRadius.route) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            GeofenceRadiusScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToSetupGuide = { navController.navigate(Screen.MockSetupGuide.route) }
+            )
         }
 
         composable(Screen.DefaultValues.route) {
@@ -155,7 +159,11 @@ fun GpsMirageNavHost(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToGeofenceRadius = { navController.navigate(Screen.GeofenceRadius.route) },
+                onNavigateToSetupGuide = { navController.navigate(Screen.MockSetupGuide.route) }
+            )
         }
 
         composable(Screen.MockSetupGuide.route) {

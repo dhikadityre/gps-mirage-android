@@ -150,6 +150,24 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun onResetToMayapadaTower() {
+        val anchor = RadiusConfig.MAYAPADA_TOWER
+        val latStr = String.format(Locale.US, "%.6f", anchor.latitude)
+        val lngStr = String.format(Locale.US, "%.6f", anchor.longitude)
+        val updated = _uiState.value.radiusConfig.copy(anchor = anchor)
+        viewModelScope.launch {
+            settingsRepository.updateRadiusConfig(updated)
+            _uiState.update {
+                it.copy(
+                    latitudeInput = latStr,
+                    longitudeInput = lngStr,
+                    coordinateError = null,
+                    message = "Titik acuan berhasil direset ke Mayapada Tower"
+                )
+            }
+        }
+    }
+
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }
     }

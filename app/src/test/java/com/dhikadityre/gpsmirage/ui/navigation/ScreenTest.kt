@@ -42,4 +42,11 @@ class ScreenTest {
         assertTrue(destinations.contains(BottomNavDestination.TOOLS))
         assertTrue(destinations.contains(BottomNavDestination.MORE))
     }
+
+    @Test
+    fun `geofence radius and mock setup guide have expected routes`() {
+        assertEquals("geofence_radius", Screen.GeofenceRadius.route)
+        assertEquals("mock_setup_guide", Screen.MockSetupGuide.route)
+        assertEquals("settings", Screen.Settings.route)
+    }
 }
