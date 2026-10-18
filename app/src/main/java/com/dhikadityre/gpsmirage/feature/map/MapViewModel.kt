@@ -118,10 +118,35 @@ class MapViewModel @Inject constructor(
         _uiState.update { it.copy(isPositionLocked = !it.isPositionLocked) }
     }
 
+    fun clearSelectedCoordinate() {
+        addressResolutionJob?.cancel()
+        _uiState.update {
+            it.copy(
+                selectedCoordinate = null,
+                selectedLocationName = "",
+                resolvedShortAddress = null,
+                isResolvingAddress = false,
+                distanceToAnchorMeters = null,
+                isWithinRadius = true
+            )
+        }
+    }
+
     fun onMapCenterMoved(lat: Double, lng: Double) {
         val currentState = _uiState.value
         if (currentState.isPositionLocked || currentState.selectionMode != MapSelectionMode.CENTER_PIN) {
             return
+        }
+
+        // Guard: If coordinate is at the anchor and selectedCoordinate is null,
+        // do not treat the initial anchor centering as a pinpoint selection.
+        val anchor = currentState.radiusConfig.anchor
+        if (anchor != null && currentState.selectedCoordinate == null) {
+            val isAtAnchor = Math.abs(lat - anchor.latitude) < 0.00001 &&
+                    Math.abs(lng - anchor.longitude) < 0.00001
+            if (isAtAnchor) {
+                return
+            }
         }
 
         val selected = Coordinate(latitude = lat, longitude = lng)

@@ -296,6 +296,44 @@ fun MapScreen(
                         .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 )
+            } else if (!uiState.isMockActive) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    shadowElevation = 6.dp,
+                    tonalElevation = 6.dp,
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    ),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = if (uiState.selectionMode == MapSelectionMode.CENTER_PIN) {
+                                "Geser peta untuk membidik titik lokasi di dalam radius Mayapada"
+                            } else {
+                                "Ketuk peta untuk memilih titik lokasi di dalam radius Mayapada"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }
@@ -349,6 +387,7 @@ private fun OsmMapView(
     onMapViewReady: (MapView) -> Unit
 ) {
     var lastAnimatedCoord by remember { mutableStateOf<Coordinate?>(null) }
+    var hasUserInteracted by remember { mutableStateOf(false) }
 
     AndroidView(
         modifier = modifier,
@@ -365,16 +404,30 @@ private fun OsmMapView(
                 setMultiTouchControls(true)
                 controller.setZoom(15.0)
 
+                val initialAnchor = radiusConfig.anchor ?: RadiusConfig.MAYAPADA_TOWER
+                controller.setCenter(GeoPoint(initialAnchor.latitude, initialAnchor.longitude))
+
+                setOnTouchListener { _, event ->
+                    if (event.action == android.view.MotionEvent.ACTION_DOWN || event.action == android.view.MotionEvent.ACTION_MOVE) {
+                        hasUserInteracted = true
+                    }
+                    false
+                }
+
                 addMapListener(object : MapListener {
                     override fun onScroll(event: ScrollEvent?): Boolean {
-                        val center = mapCenter
-                        onMapCenterMoved(center.latitude, center.longitude)
+                        if (hasUserInteracted) {
+                            val center = mapCenter
+                            onMapCenterMoved(center.latitude, center.longitude)
+                        }
                         return true
                     }
 
                     override fun onZoom(event: ZoomEvent?): Boolean {
-                        val center = mapCenter
-                        onMapCenterMoved(center.latitude, center.longitude)
+                        if (hasUserInteracted) {
+                            val center = mapCenter
+                            onMapCenterMoved(center.latitude, center.longitude)
+                        }
                         return true
                     }
                 })
@@ -385,16 +438,14 @@ private fun OsmMapView(
                         mapView: MapView?
                     ): Boolean {
                         if (e == null || mapView == null) return false
+                        hasUserInteracted = true
                         val projection = mapView.projection
                         val geoPoint = projection.fromPixels(e.x.toInt(), e.y.toInt()) as GeoPoint
                         onMapTap(geoPoint.latitude, geoPoint.longitude)
                         return true
                     }
                 })
-                post {
-                    val center = mapCenter
-                    onMapCenterMoved(center.latitude, center.longitude)
-                }
+
                 onMapViewReady(this)
             }
         },
@@ -426,7 +477,7 @@ private fun OsmMapView(
                 mapView.overlays.add(anchorMarker)
 
                 if (selectedCoordinate == null && lastAnimatedCoord == null) {
-                    mapView.controller.animateTo(anchorGeoPoint)
+                    mapView.controller.setCenter(anchorGeoPoint)
                     lastAnimatedCoord = radiusConfig.anchor
                 }
             }

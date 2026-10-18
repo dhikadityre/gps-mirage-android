@@ -24,6 +24,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -143,6 +145,65 @@ class MapViewModelTest {
             geoEngine = geoEngine,
             reverseGeocoder = reverseGeocoder
         )
+    }
+
+    @Test
+    fun `initial state has null selectedCoordinate and observes Mayapada Tower anchor`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull("Selected coordinate must be null on initial state", state.selectedCoordinate)
+        assertNull("Distance to anchor must be null on initial state", state.distanceToAnchorMeters)
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, state.radiusConfig.anchor)
+        assertTrue(state.radiusConfig.isEnabled)
+    }
+
+    @Test
+    fun `initial centering at Mayapada Tower does not prematurely select anchor coordinate`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Simulate initial camera centering scroll event to Mayapada Tower
+        val anchor = RadiusConfig.MAYAPADA_TOWER
+        viewModel.onMapCenterMoved(anchor.latitude, anchor.longitude)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull("Initial centering event at anchor must be guarded and remain null", state.selectedCoordinate)
+        assertNull(state.distanceToAnchorMeters)
+    }
+
+    @Test
+    fun `intentional pan away from anchor triggers coordinate selection and radius validation`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Move to a point 100m away from Mayapada Tower
+        val testPoint = Coordinate(latitude = -6.214000, longitude = 106.820500)
+        viewModel.onMapCenterMoved(testPoint.latitude, testPoint.longitude)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(testPoint, state.selectedCoordinate)
+        assertTrue(state.isWithinRadius)
+        assertNotNull(state.distanceToAnchorMeters)
+    }
+
+    @Test
+    fun `clearSelectedCoordinate resets selection back to null`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onMapCenterMoved(-6.214000, 106.820500)
+        advanceUntilIdle()
+        assertNotNull(viewModel.uiState.value.selectedCoordinate)
+
+        viewModel.clearSelectedCoordinate()
+        val state = viewModel.uiState.value
+        assertNull(state.selectedCoordinate)
+        assertNull(state.distanceToAnchorMeters)
+        assertNull(state.resolvedShortAddress)
     }
 
     @Test
