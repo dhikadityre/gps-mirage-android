@@ -207,6 +207,85 @@ class MapViewModelTest {
     }
 
     @Test
+    fun `initialState_radiusConfigDefaultsToMayapadaTowerAndEnabled`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val config = viewModel.uiState.value.radiusConfig
+        assertTrue(config.isEnabled)
+        assertEquals(RadiusConfig.MAYAPADA_TOWER, config.anchor)
+        assertEquals(-6.213726, config.anchor?.latitude ?: 0.0, 0.000001)
+        assertEquals(106.819897, config.anchor?.longitude ?: 0.0, 0.000001)
+        assertEquals(500.0, config.radiusMeters, 0.001)
+    }
+
+    @Test
+    fun `initialState_selectedCoordinateRemainsNullUntilUserInteraction`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.selectedCoordinate)
+        assertFalse(state.isMockActive)
+        assertEquals(0, mockLocationManager.startCallCount)
+
+        // Attempting to start mock on unselected state does nothing
+        viewModel.onStartMock()
+        advanceUntilIdle()
+        assertEquals(0, mockLocationManager.startCallCount)
+        assertFalse(viewModel.uiState.value.isMockActive)
+    }
+
+    @Test
+    fun `selectingPointWithinMayapadaRadius_marksAsValidAndComputesDistance`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Test coordinate inside 500m radius of Mayapada Tower (~130m away)
+        val validPoint = Coordinate(latitude = -6.2145, longitude = 106.8190)
+        viewModel.onMapCenterMoved(validPoint.latitude, validPoint.longitude)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(validPoint, state.selectedCoordinate)
+        assertTrue(state.isWithinRadius)
+        assertNotNull(state.distanceToAnchorMeters)
+        assertTrue("Distance should be under 500m", state.distanceToAnchorMeters!! <= 500.0)
+
+        // Starting mock succeeds
+        viewModel.onStartMock()
+        advanceUntilIdle()
+        assertEquals(1, mockLocationManager.startCallCount)
+        assertTrue(viewModel.uiState.value.isMockActive)
+    }
+
+    @Test
+    fun `selectingPointOutsideMayapadaRadius_marksAsOutOfRadiusAndPreventsMock`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Point outside 500m radius of Mayapada Tower (~1.4km away)
+        val outsidePoint = Coordinate(latitude = -6.2270, longitude = 106.819897)
+        viewModel.onMapCenterMoved(outsidePoint.latitude, outsidePoint.longitude)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(outsidePoint, state.selectedCoordinate)
+        assertFalse(state.isWithinRadius)
+        assertNotNull(state.distanceToAnchorMeters)
+        assertTrue("Distance should exceed 500m", state.distanceToAnchorMeters!! > 500.0)
+
+        // Starting mock must be blocked
+        viewModel.onStartMock()
+        advanceUntilIdle()
+        assertEquals(0, mockLocationManager.startCallCount)
+        assertFalse(viewModel.uiState.value.isMockActive)
+        val event = viewModel.uiState.value.event
+        assertTrue("Expected ShowSnackbar event", event is MapEvent.ShowSnackbar)
+        assertEquals("Lokasi berada di luar batas radius", (event as MapEvent.ShowSnackbar).message)
+    }
+
+    @Test
     fun `mapUiState observes radiusConfig from SettingsRepository`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
 
