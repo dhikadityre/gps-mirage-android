@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToolsScreen(
+    onNavigateToEligibility: () -> Unit,
     onNavigateToSetupGuide: () -> Unit,
     onNavigateToGeofenceRadius: () -> Unit,
     onNavigateToDefaultValues: () -> Unit,
@@ -167,7 +169,23 @@ fun ToolsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // SECTION 1: INTERCEPT GPS
+            // SECTION 1: BASELINE
+            SectionHeader(
+                title = "BASELINE",
+                description = "Diagnostik kelayakan sistem fake GPS dan pencatatan telemetri perangkat asli."
+            )
+
+            ToolItemCard(
+                title = "Status Fake GPS",
+                description = "Pemeriksaan otomatis kesiapan mock location, opsi pengembang, izin, dan deteksi root.",
+                badge = "Diagnostic",
+                icon = Icons.Default.VerifiedUser,
+                onClick = onNavigateToEligibility
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // SECTION 2: INTERCEPT GPS
             SectionHeader(
                 title = "INTERCEPT GPS",
                 description = "Kontrol intersep sinyal GPS, pemulihan perangkat, panduan setup, dan manajemen nilai default."

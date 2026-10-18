@@ -53,4 +53,10 @@ abstract class RepositoryModule {
     abstract fun bindReminderAlarmRepository(
         impl: com.dhikadityre.gpsmirage.data.repository.ReminderAlarmRepositoryImpl
     ): com.dhikadityre.gpsmirage.domain.alarm.ReminderAlarmRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMockEligibilityChecker(
+        impl: com.dhikadityre.gpsmirage.data.baseline.MockEligibilityCheckerImpl
+    ): com.dhikadityre.gpsmirage.domain.baseline.MockEligibilityChecker
 }

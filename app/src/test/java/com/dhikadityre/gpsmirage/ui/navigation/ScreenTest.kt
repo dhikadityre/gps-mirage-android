@@ -16,7 +16,8 @@ class ScreenTest {
             Screen.GeofenceRadius.route,
             Screen.DefaultValues.route,
             Screen.AlarmScheduler.route,
-            Screen.AppearanceSettings.route
+            Screen.AppearanceSettings.route,
+            Screen.Eligibility.route
         )
 
         assertEquals("All tools routes must be unique", toolsRoutes.size, toolsRoutes.distinct().size)

@@ -18,6 +18,7 @@ import com.dhikadityre.gpsmirage.feature.map.MapScreen
 import com.dhikadityre.gpsmirage.feature.more.MoreScreen
 import com.dhikadityre.gpsmirage.feature.settings.MockSetupGuideScreen
 import com.dhikadityre.gpsmirage.feature.more.AboutScreen
+import com.dhikadityre.gpsmirage.feature.tools.baseline.EligibilityScreen
 import com.dhikadityre.gpsmirage.feature.tools.AlarmSchedulerScreen
 import com.dhikadityre.gpsmirage.feature.tools.AppearanceScreen
 import com.dhikadityre.gpsmirage.feature.tools.DefaultValuesScreen
@@ -108,6 +109,7 @@ fun GpsMirageNavHost(
 
         composable(Screen.Tools.route) {
             ToolsScreen(
+                onNavigateToEligibility = { navController.navigate(Screen.Eligibility.route) },
                 onNavigateToSetupGuide = { navController.navigate(Screen.MockSetupGuide.route) },
                 onNavigateToGeofenceRadius = { navController.navigate(Screen.GeofenceRadius.route) },
                 onNavigateToDefaultValues = { navController.navigate(Screen.DefaultValues.route) },
@@ -147,6 +149,10 @@ fun GpsMirageNavHost(
 
         composable(Screen.Export.route) {
             ExportScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Eligibility.route) {
+            EligibilityScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.More.route) {
