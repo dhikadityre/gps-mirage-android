@@ -112,8 +112,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
+import com.dhikadityre.gpsmirage.ui.theme.DesertNight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.graphics.Bitmap
@@ -209,6 +212,8 @@ fun MapScreen(
     }
 
     Scaffold { innerPadding ->
+        val isDarkTheme = MaterialTheme.colorScheme.background == DesertNight
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -222,6 +227,7 @@ fun MapScreen(
                 resolvedShortAddress = uiState.resolvedShortAddress,
                 selectionMode = uiState.selectionMode,
                 isPositionLocked = uiState.isPositionLocked,
+                isDarkTheme = isDarkTheme,
                 mapLayerStyle = uiState.mapLayerStyle,
                 onMapTap = { lat, lng -> viewModel.onMapTap(lat, lng) },
                 onMapCenterMoved = { lat, lng -> viewModel.onMapCenterMoved(lat, lng) },
@@ -231,7 +237,8 @@ fun MapScreen(
             if (uiState.selectionMode == MapSelectionMode.CENTER_PIN && !uiState.isPositionLocked) {
                 CenterPinOverlay(
                     isResolvingAddress = uiState.isResolvingAddress,
-                    resolvedShortAddress = uiState.resolvedShortAddress
+                    resolvedShortAddress = uiState.resolvedShortAddress,
+                    isDarkTheme = isDarkTheme
                 )
             }
 
@@ -494,6 +501,7 @@ private fun OsmMapView(
     resolvedShortAddress: String?,
     selectionMode: MapSelectionMode,
     isPositionLocked: Boolean,
+    isDarkTheme: Boolean = false,
     mapLayerStyle: MapLayerStyle = MapLayerStyle.GOOGLE_ROADMAP,
     onMapTap: (Double, Double) -> Unit,
     onMapCenterMoved: (Double, Double) -> Unit,
@@ -599,6 +607,19 @@ private fun OsmMapView(
                 mapView.invalidate()
             }
 
+            // In Dark Mode (Desert Night), apply a cool desert night color tone to standard roadmap / OSM tiles
+            if (isDarkTheme && mapLayerStyle != MapLayerStyle.GOOGLE_SATELLITE && mapLayerStyle != MapLayerStyle.GOOGLE_HYBRID) {
+                val nightColorMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                    -0.70f,  0.00f,  0.00f, 0f, 185f,
+                     0.00f, -0.70f,  0.00f, 0f, 195f,
+                     0.00f,  0.00f, -0.65f, 0f, 215f,
+                     0.00f,  0.00f,  0.00f, 1f,   0f
+                ))
+                mapView.overlayManager.tilesOverlay.setColorFilter(android.graphics.ColorMatrixColorFilter(nightColorMatrix))
+            } else {
+                mapView.overlayManager.tilesOverlay.setColorFilter(null)
+            }
+
             InfoWindow.closeAllInfoWindowsOn(mapView)
             mapView.overlays.removeAll { it is Marker || it is Polygon }
 
@@ -608,8 +629,13 @@ private fun OsmMapView(
 
                 val circlePolygon = Polygon(mapView).apply {
                     points = Polygon.pointsAsCircle(anchorGeoPoint, radiusConfig.radiusMeters)
-                    fillPaint.color = android.graphics.Color.argb(45, 33, 150, 243) // Semi-transparent blue
-                    outlinePaint.color = android.graphics.Color.argb(220, 25, 118, 210) // Solid blue border
+                    if (isDarkTheme) {
+                        fillPaint.color = android.graphics.Color.argb(35, 245, 176, 65) // Golden amber transparent
+                        outlinePaint.color = android.graphics.Color.argb(220, 245, 176, 65) // Golden amber border
+                    } else {
+                        fillPaint.color = android.graphics.Color.argb(40, 197, 139, 62) // Warm ochre transparent
+                        outlinePaint.color = android.graphics.Color.argb(220, 197, 139, 62) // Warm ochre border
+                    }
                     outlinePaint.strokeWidth = 3f * mapView.context.resources.displayMetrics.density
                     title = "Geofence Radius (${radiusConfig.radiusMeters.toInt()}m)"
                     setOnClickListener { _, _, _ -> false }
@@ -658,6 +684,7 @@ private fun OsmMapView(
                 val marker = Marker(mapView).apply {
                     position = GeoPoint(selectedCoordinate.latitude, selectedCoordinate.longitude)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    icon = getSelectedLocationMarkerDrawable(mapView.context, isDarkTheme)
                     title = titleText
                     snippet = snippetText
                 }
@@ -678,6 +705,19 @@ private fun OsmMapView(
     DisposableEffect(Unit) {
         onDispose { }
     }
+}
+
+private fun getSelectedLocationMarkerDrawable(context: Context, isDark: Boolean): Drawable {
+    val resId = if (isDark) R.drawable.ic_moon_pin_marker_dark else R.drawable.ic_moon_pin_marker_light
+    val drawable = ContextCompat.getDrawable(context, resId)
+        ?: return ColorDrawable(android.graphics.Color.TRANSPARENT)
+    val density = context.resources.displayMetrics.density
+    val size = (44 * density).toInt().coerceAtLeast(1)
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, size, size)
+    drawable.draw(canvas)
+    return BitmapDrawable(context.resources, bitmap)
 }
 
 private fun getAnchorMarkerDrawable(context: Context): Drawable {
@@ -1526,6 +1566,7 @@ private fun MapFloatingControls(
 private fun CenterPinOverlay(
     isResolvingAddress: Boolean,
     resolvedShortAddress: String?,
+    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -1534,7 +1575,7 @@ private fun CenterPinOverlay(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.offset(y = (-20).dp)
+            modifier = Modifier.offset(y = (-22).dp)
         ) {
             // Floating micro-pill preview with street name / resolving indicator above the pin
             if (isResolvingAddress || !resolvedShortAddress.isNullOrBlank()) {
@@ -1574,16 +1615,13 @@ private fun CenterPinOverlay(
                 }
             }
 
-            Icon(
-                imageVector = Icons.Default.LocationOn,
+            Image(
+                painter = painterResource(
+                    if (isDarkTheme) R.drawable.ic_moon_pin_marker_dark
+                    else R.drawable.ic_moon_pin_marker_light
+                ),
                 contentDescription = "Target Location",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(40.dp)
-            )
-            Box(
-                modifier = Modifier
-                    .size(4.dp)
-                    .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
+                modifier = Modifier.size(46.dp)
             )
         }
     }

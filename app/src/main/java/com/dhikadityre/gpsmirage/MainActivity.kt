@@ -32,6 +32,13 @@ import com.dhikadityre.gpsmirage.ui.navigation.Screen
 import com.dhikadityre.gpsmirage.ui.navigation.bottomNavItems
 import com.dhikadityre.gpsmirage.ui.theme.GpsMirageTheme
 import com.dhikadityre.gpsmirage.ui.theme.ProvideAppLanguage
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.dhikadityre.dev.tools.R
+import com.dhikadityre.gpsmirage.ui.theme.DesertNight
+import com.dhikadityre.gpsmirage.ui.theme.GoldenAmber
+import com.dhikadityre.gpsmirage.ui.theme.GoldenWhite
+import com.dhikadityre.gpsmirage.ui.theme.MoonGold
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import javax.inject.Inject
@@ -81,39 +88,26 @@ fun SplashScreenView(versionName: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0F172A)),
+            .background(DesertNight),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(80.dp),
-                shadowElevation = 8.dp
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(44.dp)
-                    )
-                }
-            }
+            Image(
+                painter = painterResource(R.drawable.ic_gps_mirage_logo),
+                contentDescription = "GPS Mirage Logo",
+                modifier = Modifier.size(112.dp)
+            )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
             Text(
                 text = "GPS Mirage",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = GoldenAmber,
                 letterSpacing = 1.sp
             )
 
@@ -122,7 +116,7 @@ fun SplashScreenView(versionName: String) {
             Text(
                 text = "Precision Mock Geolocation",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF94A3B8)
+                color = GoldenWhite.copy(alpha = 0.85f)
             )
         }
 
@@ -136,7 +130,7 @@ fun SplashScreenView(versionName: String) {
                 text = "v$versionName",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF94A3B8),
+                color = MoonGold.copy(alpha = 0.75f),
                 letterSpacing = 0.5.sp
             )
         }
