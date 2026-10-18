@@ -1,6 +1,7 @@
 package com.dhikadityre.gpsmirage.core.model
 
 import com.dhikadityre.dev.tools.R
+import java.util.Locale
 
 /**
  * Available map tile styles/layers in GPS Mirage.
@@ -48,13 +49,33 @@ enum class AppLanguage(val code: String, val displayNameRes: Int) {
     );
 
     companion object {
-        val DEFAULT = INDONESIAN
-        fun fromCode(code: String?): AppLanguage =
-            when (code) {
-                "en" -> ENGLISH
-                "id", "in" -> INDONESIAN
-                else -> DEFAULT
+        val DEFAULT = ENGLISH
+
+        /**
+         * Resolves [AppLanguage] from persisted code, or falls back to detecting
+         * system phone language. If system phone is Indonesian ("in" / "id"),
+         * resolves to [INDONESIAN]. Otherwise (English or any foreign language),
+         * defaults to [ENGLISH].
+         */
+        fun fromCode(code: String?): AppLanguage {
+            if (code != null) {
+                return when (code.lowercase()) {
+                    "id", "in" -> INDONESIAN
+                    "en" -> ENGLISH
+                    else -> DEFAULT
+                }
             }
+            return resolveSystemDefault()
+        }
+
+        fun resolveSystemDefault(): AppLanguage {
+            val systemLang = Locale.getDefault().language.lowercase()
+            return if (systemLang == "in" || systemLang == "id") {
+                INDONESIAN
+            } else {
+                ENGLISH
+            }
+        }
     }
 }
 

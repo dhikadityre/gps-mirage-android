@@ -81,7 +81,7 @@ class AppearanceViewModelTest {
         val config = viewModel.uiState.value.config
         assertEquals(MapLayerStyle.GOOGLE_ROADMAP, config.mapStyle)
         assertTrue(config.showStatusBarNotification)
-        assertEquals(AppLanguage.INDONESIAN, config.language)
+        assertEquals(AppLanguage.ENGLISH, config.language)
         assertEquals(AppThemeMode.SYSTEM, config.themeMode)
     }
 
@@ -120,4 +120,48 @@ class AppearanceViewModelTest {
 
         assertEquals(AppThemeMode.DARK, viewModel.uiState.value.config.themeMode)
     }
+
+    @Test
+    fun `AppLanguage resolves Indonesian for id or in system locale`() {
+        val originalLocale = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale("id", "ID"))
+            assertEquals(AppLanguage.INDONESIAN, AppLanguage.fromCode(null))
+
+            java.util.Locale.setDefault(java.util.Locale("in", "ID"))
+            assertEquals(AppLanguage.INDONESIAN, AppLanguage.fromCode(null))
+        } finally {
+            java.util.Locale.setDefault(originalLocale)
+        }
+    }
+
+    @Test
+    fun `AppLanguage defaults to English for English or any non-Indonesian language`() {
+        val originalLocale = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.ENGLISH)
+            assertEquals(AppLanguage.ENGLISH, AppLanguage.fromCode(null))
+
+            java.util.Locale.setDefault(java.util.Locale.FRENCH)
+            assertEquals(AppLanguage.ENGLISH, AppLanguage.fromCode(null))
+
+            java.util.Locale.setDefault(java.util.Locale.JAPANESE)
+            assertEquals(AppLanguage.ENGLISH, AppLanguage.fromCode(null))
+        } finally {
+            java.util.Locale.setDefault(originalLocale)
+        }
+    }
+
+    @Test
+    fun `AppLanguage fromCode respects persisted code regardless of system locale`() {
+        val originalLocale = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.FRENCH)
+            assertEquals(AppLanguage.INDONESIAN, AppLanguage.fromCode("id"))
+            assertEquals(AppLanguage.ENGLISH, AppLanguage.fromCode("en"))
+        } finally {
+            java.util.Locale.setDefault(originalLocale)
+        }
+    }
 }
+

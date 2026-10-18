@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.dhikadityre.dev.tools.R
 import com.dhikadityre.gpsmirage.core.geo.UnitConverter
 import com.dhikadityre.gpsmirage.core.model.DefaultValueProfile
 
@@ -48,15 +50,15 @@ fun DefaultValuesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Default Value Presets", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.default_values_title), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.openCreateDialog() }) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah Preset")
+                        Icon(Icons.Default.Add, contentDescription = null)
                     }
                 }
             )
@@ -67,7 +69,7 @@ fun DefaultValuesScreen(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Preset")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.default_values_add_preset))
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -98,12 +100,12 @@ fun DefaultValuesScreen(
                         )
                         Column {
                             Text(
-                                text = "Kelola Preset Acuan Awal",
+                                text = stringResource(R.string.default_values_banner_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Preset aktif otomatis mengisi (pre-fill) form koordinat baru dan menyediakan tombol cepat 'Terapkan dari Preset'.",
+                                text = stringResource(R.string.default_values_banner_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -156,8 +158,8 @@ fun DefaultValuesScreen(
         AlertDialog(
             onDismissRequest = { profileToDelete = null },
             icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("Hapus Preset?") },
-            text = { Text("Apakah Anda yakin ingin menghapus preset '${profile.name}'? Tindakan ini tidak dapat dibatalkan.") },
+            title = { Text(stringResource(R.string.default_values_delete_title)) },
+            text = { Text(stringResource(R.string.default_values_delete_message, profile.name)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -166,12 +168,12 @@ fun DefaultValuesScreen(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Hapus")
+                    Text(stringResource(R.string.location_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { profileToDelete = null }) {
-                    Text("Batal")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -182,8 +184,8 @@ fun DefaultValuesScreen(
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
             icon = { Icon(Icons.Default.RestartAlt, contentDescription = null) },
-            title = { Text("Reset Preset 'original'?") },
-            text = { Text("Nilai preset bawaan akan dikembalikan ke konfigurasi awal (-6.213647, 106.819969, radius 50m, accuracy 78 ft, altitude 89 ft, sensor kompas aktif).") },
+            title = { Text(stringResource(R.string.default_values_reset_original_title)) },
+            text = { Text(stringResource(R.string.default_values_reset_original_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -191,12 +193,12 @@ fun DefaultValuesScreen(
                         showResetConfirm = false
                     }
                 ) {
-                    Text("Reset")
+                    Text(stringResource(R.string.action_reset))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResetConfirm = false }) {
-                    Text("Batal")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -261,7 +263,7 @@ private fun PresetCard(
                 if (isActive) {
                     AssistChip(
                         onClick = {},
-                        label = { Text("Aktif", fontWeight = FontWeight.Bold) },
+                        label = { Text(stringResource(R.string.default_values_active_badge), fontWeight = FontWeight.Bold) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.CheckCircle,
@@ -281,7 +283,7 @@ private fun PresetCard(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
-                        Text("Pilih Aktif", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.default_values_select_active), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -289,21 +291,21 @@ private fun PresetCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                DetailRow(label = "Koordinat", value = "${profile.latitude}, ${profile.longitude}")
-                DetailRow(label = "Radius", value = "${profile.radiusMeters.toInt()} meter")
+                DetailRow(label = stringResource(R.string.nav_map), value = "${profile.latitude}, ${profile.longitude}")
+                DetailRow(label = stringResource(R.string.generator_radius), value = "${profile.radiusMeters.toInt()} ${stringResource(R.string.generator_radius_unit)}")
                 DetailRow(
-                    label = "Accuracy",
+                    label = stringResource(R.string.location_accuracy),
                     value = "${UnitConverter.formatTwoDecimals(profile.accuracyFeet)} ft (~${UnitConverter.formatTwoDecimals(profile.accuracyMeters)}m)"
                 )
                 DetailRow(
-                    label = "Altitude",
+                    label = stringResource(R.string.location_altitude),
                     value = "${UnitConverter.formatTwoDecimals(profile.altitudeFeet)} ft (~${UnitConverter.formatTwoDecimals(profile.altitudeMeters)}m)"
                 )
-                DetailRow(label = "Speed", value = "${profile.speedKmh.toInt()} km/h")
+                DetailRow(label = stringResource(R.string.location_speed), value = "${profile.speedKmh.toInt()} km/h")
                 DetailRow(
-                    label = "Bearing",
+                    label = stringResource(R.string.location_bearing),
                     value = if (profile.useDeviceSensor) {
-                        "${UnitConverter.formatTwoDecimals(profile.bearingDegrees)}° (Ikuti Sensor Kompas)"
+                        "${UnitConverter.formatTwoDecimals(profile.bearingDegrees)}° (Compass)"
                     } else {
                         "${UnitConverter.formatTwoDecimals(profile.bearingDegrees)}° (Manual)"
                     }
@@ -319,13 +321,13 @@ private fun PresetCard(
                     TextButton(onClick = onResetOriginal) {
                         Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Reset Awal")
+                        Text(stringResource(R.string.default_values_reset_initial))
                     }
                 } else {
                     IconButton(onClick = onDelete) {
                         Icon(
                             Icons.Default.DeleteOutline,
-                            contentDescription = "Hapus",
+                            contentDescription = stringResource(R.string.location_delete),
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
@@ -334,7 +336,7 @@ private fun PresetCard(
                 TextButton(onClick = onEdit) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Edit")
+                    Text(stringResource(R.string.action_edit))
                 }
             }
         }
@@ -398,19 +400,23 @@ private fun DefaultProfileEditDialog(
                     TopAppBar(
                         title = {
                             Text(
-                                if (form.id == 0L) "Tambah Preset Baru" else "Edit Preset: ${form.name}",
+                                if (form.id == 0L) {
+                                    stringResource(R.string.default_values_dialog_add_title)
+                                } else {
+                                    stringResource(R.string.default_values_dialog_edit_title, form.name)
+                                },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                         },
                         navigationIcon = {
                             IconButton(onClick = onDismiss) {
-                                Icon(Icons.Default.Close, contentDescription = "Tutup")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close))
                             }
                         },
                         actions = {
                             TextButton(onClick = onSave) {
-                                Text("Simpan", fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold)
                             }
                         }
                     )
@@ -442,13 +448,13 @@ private fun DefaultProfileEditDialog(
                     OutlinedTextField(
                         value = form.name,
                         onValueChange = onNameChange,
-                        label = { Text("Nama Preset") },
-                        placeholder = { Text("contoh: original, Office, Park") },
+                        label = { Text(stringResource(R.string.default_values_preset_name)) },
+                        placeholder = { Text(stringResource(R.string.default_values_preset_placeholder)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
 
-                    Text("Koordinat & Geofence", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.default_values_section_coord_geofence), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -475,7 +481,7 @@ private fun DefaultProfileEditDialog(
                     OutlinedTextField(
                         value = form.radiusMeters,
                         onValueChange = onRadiusChange,
-                        label = { Text("Radius Geofence (Meter)") },
+                        label = { Text(stringResource(R.string.default_values_radius_meters)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -483,9 +489,9 @@ private fun DefaultProfileEditDialog(
 
                     HorizontalDivider()
 
-                    Text("Konversi Dua Arah: Accuracy", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.default_values_accuracy_section), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                     Text(
-                        text = "1 meter ≈ 3.28 ft. Mengubah meter otomatis mengubah ft, begitu pula sebaliknya.",
+                        text = stringResource(R.string.default_values_accuracy_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -514,9 +520,9 @@ private fun DefaultProfileEditDialog(
 
                     HorizontalDivider()
 
-                    Text("Konversi Dua Arah: Altitude", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.default_values_altitude_section), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                     Text(
-                        text = "Ketinggian di atas permukaan laut. Input meter atau feet disinkronkan dua arah.",
+                        text = stringResource(R.string.default_values_altitude_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -545,12 +551,12 @@ private fun DefaultProfileEditDialog(
 
                     HorizontalDivider()
 
-                    Text("Pergerakan & Arah Hadap (Bearing)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.default_values_movement_section), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
 
                     OutlinedTextField(
                         value = form.speedKmh,
                         onValueChange = onSpeedChange,
-                        label = { Text("Speed (km/h)") },
+                        label = { Text(stringResource(R.string.default_values_speed)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -570,15 +576,18 @@ private fun DefaultProfileEditDialog(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Ikuti Sensor Kompas HP",
+                                    text = stringResource(R.string.default_values_compass_follow),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
                                     text = if (isCompassAvailable) {
-                                        "Sensor Aktif: ${UnitConverter.formatTwoDecimals(currentSensorBearing.toDouble())}°"
+                                        stringResource(
+                                            R.string.default_values_sensor_active,
+                                            UnitConverter.formatTwoDecimals(currentSensorBearing.toDouble())
+                                        )
                                     } else {
-                                        "Sensor kompas fisik tidak terdeteksi pada device"
+                                        stringResource(R.string.default_values_compass_unavailable)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -595,7 +604,7 @@ private fun DefaultProfileEditDialog(
                     OutlinedTextField(
                         value = form.bearingDegrees,
                         onValueChange = onBearingChange,
-                        label = { Text("Bearing Manual (0.0° - 360.0°)") },
+                        label = { Text(stringResource(R.string.default_values_bearing_manual)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !form.useDeviceSensor,

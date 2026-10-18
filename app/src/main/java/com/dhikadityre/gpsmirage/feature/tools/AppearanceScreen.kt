@@ -160,12 +160,12 @@ fun AppearanceScreen(
                     SelectableOptionRow(
                         title = stringResource(lang.displayNameRes),
                         subtitle = if (lang == AppLanguage.INDONESIAN) {
-                            "Bahasa Indonesia langsung aktif di seluruh layar"
+                            stringResource(R.string.appearance_lang_id_desc)
                         } else {
-                            "Instant English UI strings without restarting app"
+                            stringResource(R.string.appearance_lang_en_desc)
                         },
                         isSelected = isSelected,
-                        badge = if (lang == AppLanguage.INDONESIAN) "Default" else null,
+                        badge = if (lang == AppLanguage.ENGLISH) stringResource(R.string.badge_default) else null,
                         onClick = { viewModel.setLanguage(lang) }
                     )
                 }

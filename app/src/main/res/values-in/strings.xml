@@ -57,6 +57,25 @@
     <string name="locations_empty_title">Belum ada lokasi tersimpan.</string>
     <string name="locations_empty_message">Pilih lokasi pada peta dan simpan untuk akses cepat nanti.</string>
     <string name="locations_open_map">Buka Peta</string>
+    <string name="locations_title">Lokasi &amp; Radius Anchors</string>
+    <string name="locations_search_placeholder">Cari lokasi...</string>
+    <string name="locations_tab_anchors">Anchors (%d)</string>
+    <string name="locations_tab_mock_targets">Mock Targets (%d)</string>
+    <string name="locations_tab_grouped">Grouped (%d)</string>
+    <string name="locations_tab_native">Native (%d)</string>
+    <string name="locations_filter_favorites">Favorit</string>
+    <string name="locations_filter_all_folders">Semua Folder</string>
+    <string name="locations_delete_selected_title">Hapus %d Lokasi?</string>
+    <string name="locations_delete_selected_message">Apakah Anda yakin ingin menghapus %d lokasi terpilih? Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="locations_delete_selected_btn">Hapus (%d)</string>
+    <string name="locations_btn_open_google_maps">Buka di Google Maps</string>
+    <string name="locations_btn_delete_duplicates">Hapus Duplikat</string>
+    <string name="locations_btn_link_anchor">Kaitkan Anchor</string>
+    <string name="locations_btn_generate_sub_mock">Generate Sub-Mock</string>
+    <string name="locations_generate_count_btn">Generate (%d Titik)</string>
+    <string name="locations_generate_submock_title">Generate Titik Sub-Mock</string>
+    <string name="locations_generate_submock_desc">Hasilkan titik acak tersebar di dalam radius geofence acuan "%s":</string>
+    <string name="locations_generate_count_label">Jumlah Titik yang Dihasilkan:</string>
 
     <!-- Folders -->
     <string name="folder_create">Buat Folder</string>
@@ -65,21 +84,73 @@
     <string name="folder_export">Ekspor Folder</string>
     <string name="folder_name">Nama Folder</string>
     <string name="folder_empty_title">Belum ada folder.</string>
-    <string name="folder_empty_message">Buat folder untuk mengelompokkan lokasi tersimpan Anda.</string>
+    <string name="folder_empty_message">Buat folder untuk mengelompokkan lokasi Anda.</string>
     <string name="folder_delete_confirm">Hapus folder "%s"? Lokasi di dalamnya tidak akan terhapus.</string>
 
     <!-- History -->
     <string name="history_today">Hari Ini</string>
     <string name="history_yesterday">Kemarin</string>
     <string name="history_empty_title">Belum ada riwayat lokasi.</string>
-    <string name="history_empty_message">Sesi mock location Anda akan muncul di sini.</string>
+    <string name="history_empty_message">Sesi lokasi tiruan Anda akan muncul di sini.</string>
     <string name="history_duration">Durasi: %s</string>
 
     <!-- Tools -->
-    <string name="tools_coordinate_generator">Coordinate Generator</string>
-    <string name="tools_import">Import Locations</string>
-    <string name="tools_export">Export Locations</string>
-    <string name="tools_bulk_parser">Bulk Text Parser</string>
+    <string name="tools_title">Tools</string>
+    <string name="tools_coordinate_generator">Generator Koordinat</string>
+    <string name="tools_import">Impor Lokasi</string>
+    <string name="tools_export">Ekspor Lokasi</string>
+    <string name="tools_bulk_parser">Parser Teks Massal</string>
+
+    <!-- Tools Sections & Items -->
+    <string name="tools_section_baseline_title">BASELINE</string>
+    <string name="tools_section_baseline_desc">Diagnostik kelayakan sistem fake GPS dan pencatatan telemetri perangkat asli.</string>
+    <string name="tools_item_eligibility_title">Status Fake GPS</string>
+    <string name="tools_item_eligibility_desc">Pemeriksaan otomatis kesiapan mock location, opsi pengembang, izin, dan deteksi root.</string>
+    <string name="tools_item_eligibility_badge">Diagnostik</string>
+    <string name="tools_item_native_gps_title">Native GPS</string>
+    <string name="tools_item_native_gps_desc">Simulasi pembacaan data GPS fisik asli perangkat (Lat, Lng, Akurasi, Altitude, Speed, Bearing) tanpa mock.</string>
+    <string name="tools_item_native_gps_badge">Hardware</string>
+    <string name="tools_section_intercept_title">INTERCEPT GPS</string>
+    <string name="tools_section_intercept_desc">Kontrol intersep sinyal GPS, pemulihan perangkat, panduan setup, dan manajemen nilai default.</string>
+    <string name="tools_item_reset_title">Reset Fake GPS</string>
+    <string name="tools_item_reset_desc">Pulihkan GPS fisik asli perangkat dan kembalikan setelan mock ke kondisi awal (Soft / Hard Reset).</string>
+    <string name="tools_item_reset_badge">Dual-Mode</string>
+    <string name="tools_item_setup_title">Cara Setup</string>
+    <string name="tools_item_setup_desc">Panduan aktivasi Opsi Pengembang (Developer Options) dan penetapan Mock Location App.</string>
+    <string name="tools_item_geofence_title">Geofence Radius</string>
+    <string name="tools_item_geofence_desc">Atur batas area pemilihan mock location dan koordinat titik acuan (Center Anchor).</string>
+    <string name="tools_item_default_values_title">Default Values</string>
+    <string name="tools_item_default_values_desc">Kelola profil nilai default bawaan (original) untuk autocompletion form input koordinat.</string>
+    <string name="tools_section_automation_title">AUTOMATION</string>
+    <string name="tools_section_automation_desc">Otomasi pembuatan titik koordinat dan jadwal pengingat rutin aplikasi.</string>
+    <string name="tools_item_generator_title">Coordinate Generator</string>
+    <string name="tools_item_generator_desc">Hasilkan kumpulan koordinat acak/terdistribusi di dalam radius lingkaran titik acuan.</string>
+    <string name="tools_item_alarm_title">Alarm &amp; Jadwal Notifikasi</string>
+    <string name="tools_item_alarm_desc">Pengingat terjadwal jam dan hari tertentu untuk membuka dan menjalankan GPS Mirage.</string>
+    <string name="tools_section_data_title">DATA MANAGEMENT</string>
+    <string name="tools_section_data_desc">Penyimpanan, pencadangan, dan pemulihan data titik koordinat tersimpan.</string>
+    <string name="tools_item_import_title">Import Locations</string>
+    <string name="tools_item_import_desc">Tempel koordinat tunggal/massal dalam berbagai format, atau impor file JSON cadangan.</string>
+    <string name="tools_item_export_title">Export Locations</string>
+    <string name="tools_item_export_desc">Ekspor lokasi favorit, folder tertentu, atau seluruh database koordinat ke file JSON.</string>
+
+    <!-- Tools Dialogs -->
+    <string name="tools_dialog_reset_title">Reset Fake GPS</string>
+    <string name="tools_dialog_reset_subtitle">Pilih mode pemulihan koordinat dan sistem mock:</string>
+    <string name="tools_dialog_soft_reset_title">1. Soft Reset</string>
+    <string name="tools_dialog_soft_reset_desc">Hanya menghentikan mock dan melepas test provider. GPS fisik asli HP pulih normal tanpa mengubah posisi camera/pin peta saat ini.</string>
+    <string name="tools_dialog_hard_reset_title">2. Hard Reset</string>
+    <string name="tools_dialog_hard_reset_desc">Hentikan mock, lepas provider, pulihkan GPS fisik, kembalikan posisi camera &amp; pin peta ke Center Anchor, serta reset status Lock dan Rewind.</string>
+    <string name="tools_dialog_soft_reset_btn">Soft Reset</string>
+    <string name="tools_dialog_hard_reset_btn">Hard Reset</string>
+    <string name="tools_dialog_mock_running_title">Fake GPS Sedang Aktif</string>
+    <string name="tools_dialog_mock_running_desc">Fake GPS sedang berjalan di latar belakang. Untuk membaca koordinat fisik riil dari hardware perangkat, Anda harus melakukan Hard Reset terlebih dahulu agar test provider dilepas dan GPS fisik dipulihkan.</string>
+    <string name="tools_dialog_hard_reset_gps_btn">Hard Reset GPS</string>
+    <string name="tools_dialog_verify_location_title">Verifikasi Lokasi Asli</string>
+    <string name="tools_dialog_verify_location_desc">GPS fisik berhasil dipulihkan! Apakah Anda ingin membuka Google Maps sekarang untuk memverifikasi lokasi fisik Anda?</string>
+    <string name="tools_dialog_verify_countdown">Otomatis ditutup dalam %d detik...</string>
+    <string name="tools_dialog_open_gmaps_btn">Buka Google Maps</string>
+    <string name="tools_dialog_no_btn">Tidak</string>
 
     <!-- Generator -->
     <string name="generator_center_latitude">Latitude Pusat</string>
@@ -89,12 +160,12 @@
     <string name="generator_count">Jumlah Titik</string>
     <string name="generator_mode">Mode Pembuatan</string>
     <string name="generator_mode_random">Acak</string>
-    <string name="generator_generate">Hasilkan</string>
+    <string name="generator_generate">Generate</string>
     <string name="generator_copy_one">Salin Satu</string>
     <string name="generator_copy_all">Salin Semua</string>
     <string name="generator_copy_json">Salin JSON</string>
     <string name="generator_save_all">Simpan Semua</string>
-    <string name="generator_result">Berhasil membuat %d lokasi</string>
+    <string name="generator_result">Berhasil menghasilkan %d lokasi</string>
 
     <!-- Import -->
     <string name="import_title">Impor Lokasi</string>
@@ -105,11 +176,11 @@
     <string name="import_unnamed">%d tanpa nama</string>
     <string name="import_duplicates">Duplikat: %d</string>
     <string name="import_action">Impor %d Lokasi</string>
-    <string name="import_duplicate_title">%d lokasi duplikat ditemukan.</string>
+    <string name="import_duplicate_title">Ditemukan %d lokasi duplikat.</string>
     <string name="import_duplicate_message">Apa yang ingin Anda lakukan?</string>
     <string name="import_skip_duplicates">Lewati duplikat</string>
-    <string name="import_create_duplicates">Buat duplikat baru</string>
-    <string name="import_replace_existing">Ganti yang sudah ada</string>
+    <string name="import_create_duplicates">Buat duplikat</string>
+    <string name="import_replace_existing">Gantikan yang ada</string>
 
     <!-- Export -->
     <string name="export_title">Ekspor Lokasi</string>
@@ -119,12 +190,66 @@
     <string name="export_failed">Gagal mengekspor</string>
 
     <!-- More / Settings -->
+    <string name="more_title">Lainnya</string>
+    <string name="more_appearance_title">Tampilan &amp; Tema</string>
+    <string name="more_appearance_desc">Pilihan layer peta (Google Maps/OSM), notifikasi status bar, bahasa, dan dark/light mode.</string>
+    <string name="more_about_title">Tentang Aplikasi</string>
+    <string name="more_about_desc">Nomor versi aplikasi (Hero display), profil developer Dhikadityre, dan tujuan sistem.</string>
     <string name="more_settings">Pengaturan</string>
     <string name="more_setup_guide">Panduan Setup Mock Location</string>
     <string name="more_about">Tentang</string>
     <string name="more_advanced">Pengaturan Lanjutan</string>
+
+    <!-- About Screen Details -->
     <string name="about_version">Versi %s</string>
+    <string name="about_build_target">Build %1$d • Target SDK %2$d (Android 15)</string>
+    <string name="about_min_sdk">Min SDK %d (Marshmallow)</string>
+    <string name="about_subtitle">Precision Mock Geolocation &amp; Geofence Simulator</string>
     <string name="about_description">GPS Mirage — Cara termudah untuk menguji dan mengelola mock location di Android.</string>
+    <string name="about_app_purpose_title">Tujuan Aplikasi</string>
+    <string name="about_app_purpose_content">Aplikasi pengujian geolokasi dan simulasi fake GPS berbasis radius acuan (geofence) untuk riset, evaluasi batas wilayah terkontrol, serta perlindungan privasi.</string>
+    <string name="about_features_title">Fitur Unggulan Sistem:</string>
+    <string name="about_feature_1">Batas simulasi geofence akurat dengan titik acuan Center Anchor.</string>
+    <string name="about_feature_2">Pengujian fungsionalitas lokasi tanpa berpindah tempat fisik.</string>
+    <string name="about_feature_3">Preset parameter akurasi, ketinggian, kecepatan, dan bearing.</string>
+    <string name="about_feature_4">Otomasi multi-stage map rewind, generator titik, dan reminder.</string>
+    <string name="about_developer_title">Developer di Baliknya</string>
+    <string name="about_developer_role">Android Software Engineer</string>
+    <string name="about_developer_desc">Aplikasi ini dirancang dengan Clean Architecture dan Material 3, mengintegrasikan mesin OpenStreetMap (OSMDroid), Dagger Hilt, dan Room Database dengan standar kompatibilitas mundur penuh dari Android 6.0 Marshmallow hingga Android 15.</string>
+    <string name="about_security_title">Keamanan &amp; Privasi Data</string>
+    <string name="about_security_desc">GPS Mirage beroperasi 100% lokal pada perangkat pengguna (client-side execution). Seluruh data titik koordinat tersimpan, folder, log histori, dan profil nilai default disimpan murni di database internal SQLite perangkat Anda dan tidak dikirim ke server pihak ketiga mana pun.</string>
+    <string name="about_tag_offline">Offline-First</string>
+    <string name="about_copyright">© 2026 Dhikadityre • All Rights Reserved</string>
+
+    <!-- Geofence & Default Values & Native GPS -->
+    <string name="geofence_title">Geofence Radius</string>
+    <string name="geofence_header_tag">INTERCEPT GPS / GEOFENCE RADIUS</string>
+    <string name="geofence_header_desc">Batasi area pemilihan mock location di dalam batas radius tertentu dari titik acuan (Center Anchor).</string>
+    <string name="geofence_enable_limit">Aktifkan Batasan Radius</string>
+    <string name="geofence_center_anchor">Titik Acuan (Center Anchor)</string>
+    <string name="geofence_center_anchor_desc">Koordinat pusat lingkaran acuan batas geofence radius.</string>
+    <string name="geofence_use_gps">Gunakan GPS</string>
+    <string name="geofence_reset_mayapada">Reset Mayapada</string>
+    <string name="geofence_save_anchor">Simpan Titik Acuan</string>
+    <string name="geofence_radius_size">Ukuran Radius</string>
+    <string name="geofence_manual_distance_input">Input Jarak Manual (meter)</string>
+    <string name="geofence_setup_guide_title">Panduan Setup Mock Location</string>
+    <string name="geofence_setup_guide_desc">Pelajari langkah mengaktifkan Developer Options dan Mock Location App di Android.</string>
+    <string name="default_values_title">Default Value Presets</string>
+    <string name="default_values_active_badge">Aktif</string>
+    <string name="default_values_select_active">Pilih Aktif</string>
+    <string name="default_values_reset_initial">Reset Awal</string>
+    <string name="default_values_delete_title">Hapus Preset?</string>
+    <string name="default_values_delete_message">Apakah Anda yakin ingin menghapus preset \'%s\'? Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="default_values_reset_original_title">Reset Preset \'original\'?</string>
+    <string name="default_values_reset_original_message">Nilai preset bawaan akan dikembalikan ke konfigurasi awal (-6.213647, 106.819969, radius 50m, accuracy 78 ft, altitude 89 ft, sensor kompas aktif).</string>
+    <string name="native_gps_title">Native GPS Telemetry</string>
+    <string name="native_gps_connecting">Menghubungkan ke GPS Fisik...</string>
+    <string name="native_gps_reading">Membaca sinyal satelit hardware tanpa mock.</string>
+    <string name="native_gps_active">GPS Fisik Aktif (Unmocked)</string>
+    <string name="native_gps_live_section">TELEMETRI LIVE FISIK</string>
+    <string name="native_gps_preview_section">PREVIEW PETA FISIK (OSM)</string>
+    <string name="native_gps_save_point">Simpan Titik Native</string>
 
     <!-- Validation -->
     <string name="validation_latitude_range">Latitude harus berada di antara -90 dan 90.</string>
@@ -140,6 +265,7 @@
     <string name="error_generic">Terjadi kesalahan. Silakan coba lagi.</string>
 
     <!-- Actions -->
+    <string name="action_back">Kembali</string>
     <string name="action_cancel">Batal</string>
     <string name="action_confirm">Konfirmasi</string>
     <string name="action_save">Simpan</string>
@@ -148,6 +274,10 @@
     <string name="action_search">Cari</string>
     <string name="action_close">Tutup</string>
     <string name="action_retry">Coba Lagi</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Hapus</string>
+    <string name="badge_default">Default</string>
 
     <!-- Units -->
     <string name="unit_meters">%s m</string>
@@ -176,10 +306,148 @@
     <string name="appearance_language_desc">Ubah bahasa teks antarmuka secara instan tanpa perlu mengubah pengaturan bahasa sistem HP.</string>
     <string name="language_indonesian">Bahasa Indonesia</string>
     <string name="language_english">English</string>
+    <string name="appearance_lang_id_desc">Bahasa Indonesia langsung aktif di seluruh layar</string>
+    <string name="appearance_lang_en_desc">Bahasa Inggris langsung aktif tanpa restart aplikasi</string>
 
     <string name="appearance_theme_title">Tema Tampilan</string>
     <string name="appearance_theme_desc">Pilihan tema visual terang, gelap, atau ikuti preferensi sistem perangkat.</string>
     <string name="theme_follow_system">Ikuti Sistem</string>
     <string name="theme_light">Mode Terang (Light)</string>
     <string name="theme_dark">Mode Gelap (Dark)</string>
+
+    <!-- Locations Screen Additional -->
+    <string name="locations_selected_count">%d terpilih</string>
+    <string name="locations_delete_linked_targets">Hapus juga Mock Target yang terhubung ke Anchor terpilih</string>
+
+    <!-- Map Screen Additions -->
+    <string name="map_detecting_street">Mendeteksi nama jalan…</string>
+    <string name="map_selected_location">Lokasi Terpilih</string>
+    <string name="map_street_not_detected">Nama jalan tidak terdeteksi</string>
+    <string name="map_close_edit_name">Tutup edit nama</string>
+    <string name="map_edit_name">Ubah nama lokasi</string>
+    <string name="map_position_locked">Posisi Terkunci</string>
+    <string name="map_tap_to_unlock">Ketuk untuk buka kunci</string>
+    <string name="map_open_in_google_maps">Buka di Google Maps</string>
+    <string name="map_outside_radius">Di luar batas radius</string>
+    <string name="map_distance_to_anchor">Jarak ke acuan: %d meter</string>
+    <string name="map_radius_limit">Batas: %dm</string>
+    <string name="map_hint_pan_pin">Geser peta untuk membidik titik lokasi di dalam radius Mayapada</string>
+    <string name="map_hint_tap_select">Ketuk peta untuk memilih titik lokasi di dalam radius Mayapada</string>
+    <string name="map_mode_center_pin_active">Mode Bidik Tengah (Aktif)</string>
+    <string name="map_mode_tap_select_active">Mode Ketuk Bebas (Aktif)</string>
+    <string name="map_lock_position">Kunci Posisi</string>
+    <string name="map_unlock_position">Buka Kunci Posisi</string>
+    <string name="map_rewind_position">Kembalikan Posisi (Rewind)</string>
+    <string name="map_rewind_unavailable">Rewind Tidak Tersedia</string>
+    <string name="map_recenter_anchor">Pusatkan ke Titik Acuan</string>
+    <string name="map_searching_street">Mencari jalan…</string>
+
+    <!-- Native GPS Telemetry -->
+    <string name="native_gps_connecting_desc">Membaca sinyal satelit hardware tanpa mock.</string>
+    <string name="native_gps_hardware_accuracy">Akurasi hardware: ±%.1f m</string>
+    <string name="native_gps_accuracy">Akurasi</string>
+    <string name="native_gps_altitude">Ketinggian (Altitude)</string>
+    <string name="native_gps_speed">Kecepatan (Speed)</string>
+    <string name="native_gps_bearing">Orientasi (Bearing)</string>
+    <string name="native_gps_radius_benchmark">Radius Acuan Benchmark</string>
+    <string name="native_gps_marker_title">Posisi Fisik Hardware</string>
+    <string name="native_gps_waiting_satellites">Menunggu perolehan koordinat satelit…</string>
+    <string name="native_gps_dialog_title">Simpan Titik Native</string>
+    <string name="native_gps_dialog_desc">Titik telemetri ini akan disimpan dengan tag Native sebagai acuan baseline fisik:</string>
+    <string name="native_gps_type_badge">Tipe: Native GPS Benchmark</string>
+    <string name="native_gps_coordinates_format">Koordinat: %1$.6f, %2$.6f</string>
+
+    <!-- Eligibility / Baseline Status -->
+    <string name="eligibility_title">Status Fake GPS</string>
+    <string name="eligibility_system_ready">Sistem Eligible &amp; Siap</string>
+    <string name="eligibility_action_required">Perlu Tindakan</string>
+    <string name="eligibility_ready_desc">Semua prasyarat mock location terpenuhi. Aplikasi siap digunakan untuk simulasi titik koordinat.</string>
+    <string name="eligibility_not_ready_desc">Terdapat prasyarat yang belum aktif. Ketuk tombol pada item di bawah untuk mengonfigurasinya.</string>
+    <string name="eligibility_section_title">PILIHAN EVALUASI KELAYAKAN SISTEM</string>
+    <string name="eligibility_recheck">Periksa Ulang Kesiapan</string>
+    <string name="eligibility_status_active">Aktif</string>
+    <string name="eligibility_status_inactive">Tidak Aktif</string>
+    <string name="eligibility_dev_options_title">1. Opsi Pengembang (Developer Options)</string>
+    <string name="eligibility_dev_options_desc">Prasyarat utama Android untuk mengizinkan penetapan aplikasi mock location.</string>
+    <string name="eligibility_dev_options_btn">Buka Opsi Pengembang</string>
+    <string name="eligibility_mock_app_title">2. Aplikasi Lokasi Tiruan (Mock App)</string>
+    <string name="eligibility_mock_app_desc">GPS Mirage harus ditetapkan sebagai penyedia lokasi tiruan di Opsi Pengembang.</string>
+    <string name="eligibility_mock_app_selected">GPS Mirage Terpilih</string>
+    <string name="eligibility_mock_app_not_set">Belum Ditetapkan</string>
+    <string name="eligibility_mock_app_btn">Atur Mock Location App</string>
+    <string name="eligibility_gps_title">3. Sensor GPS Fisik (Location Service)</string>
+    <string name="eligibility_gps_desc">Layanan lokasi hardware perangkat harus dalam kondisi menyala/aktif.</string>
+    <string name="eligibility_gps_active">GPS Aktif</string>
+    <string name="eligibility_gps_inactive">Layanan Lokasi Nonaktif</string>
+    <string name="eligibility_gps_btn">Buka Pengaturan Lokasi</string>
+    <string name="eligibility_permission_title">4. Izin Lokasi Perangkat</string>
+    <string name="eligibility_permission_desc">Izin ACCESS_FINE_LOCATION diperlukan untuk membaca dan memvalidasi koordinat.</string>
+    <string name="eligibility_permission_granted">Izin Diberikan</string>
+    <string name="eligibility_permission_missing">Izin Belum Lengkap</string>
+    <string name="eligibility_permission_btn">Beri Izin Aplikasi</string>
+    <string name="eligibility_root_title">5. Status Deteksi Root (Superuser)</string>
+    <string name="eligibility_root_desc">Pemeriksaan biner su dan build test-keys perangkat.</string>
+    <string name="eligibility_root_detected">Root Terdeteksi</string>
+    <string name="eligibility_root_not_detected">Non-Rooted (Standar Android)</string>
+
+    <!-- Alarm & Scheduler -->
+    <string name="alarm_scheduler_title">Alarm &amp; Jadwal Notifikasi</string>
+    <string name="alarm_add_alarm">Tambah Alarm</string>
+    <string name="alarm_add_schedule">Tambah Jadwal</string>
+    <string name="alarm_all_active">Semua Alarm Aktif</string>
+    <string name="alarm_all_active_desc">Seluruh alarm berjalan sesuai jadwal</string>
+    <string name="alarm_all_disabled_desc">Semua jadwal alarm sedang dinonaktifkan</string>
+    <string name="alarm_schedule_list_title">DAFTAR JADWAL PENGINGAT (%d)</string>
+    <string name="alarm_delete_title">Hapus Jadwal Alarm?</string>
+    <string name="alarm_delete_confirm">Apakah Anda yakin ingin menghapus alarm \'%1$s\' (%2$s)? Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="alarm_dialog_create_title">Tambah Jadwal Alarm</string>
+    <string name="alarm_dialog_edit_title">Edit Jadwal Alarm</string>
+    <string name="alarm_label_field">Label / Keterangan</string>
+    <string name="alarm_label_placeholder">Contoh: Absen Pagi / Shift Siang</string>
+    <string name="alarm_repeat_section">PILIHAN PENGULANGAN</string>
+    <string name="alarm_repeat_weekdays">Hari Kerja</string>
+    <string name="alarm_repeat_weekends">Akhir Pekan</string>
+    <string name="alarm_repeat_everyday">Setiap Hari</string>
+    <string name="alarm_repeat_once">Sekali Saja</string>
+    <string name="alarm_save_button">Simpan Alarm</string>
+    <string name="alarm_empty_title">Belum Ada Jadwal Alarm</string>
+    <string name="alarm_empty_desc">Tambahkan jadwal pengingat untuk membantu Anda membuka dan mengaktifkan GPS Mirage sesuai jam kerja atau absen rutin Anda.</string>
+    <string name="alarm_add_first">Tambah Pengingat Pertama</string>
+    <string name="alarm_notif_perm_title">Izin Notifikasi Dibutuhkan</string>
+    <string name="alarm_notif_perm_desc">Izinkan aplikasi menampilkan notifikasi agar pengingat jadwal dapat berbunyi.</string>
+    <string name="alarm_notif_perm_grant">Izinkan</string>
+    <string name="alarm_exact_perm_title">Izin Alarm Tepat Waktu (Exact)</string>
+    <string name="alarm_exact_perm_desc">Aktifkan izin Exact Alarm di pengaturan sistem agar alarm berbunyi tepat detik yang ditentukan.</string>
+    <string name="alarm_exact_perm_open">Buka</string>
+
+    <!-- Default Values Screen Additions -->
+    <string name="default_values_preset_name">Nama Preset</string>
+    <string name="default_values_preset_placeholder">contoh: original, Office, Park</string>
+    <string name="default_values_section_coord_geofence">Koordinat &amp; Geofence</string>
+    <string name="default_values_radius_meters">Radius Geofence (Meter)</string>
+    <string name="default_values_accuracy_section">Konversi Dua Arah: Accuracy</string>
+    <string name="default_values_altitude_section">Konversi Dua Arah: Altitude</string>
+    <string name="default_values_movement_section">Pergerakan &amp; Arah Hadap (Bearing)</string>
+    <string name="default_values_speed">Kecepatan (km/h)</string>
+    <string name="default_values_bearing_manual">Bearing Manual (0.0° - 360.0°)</string>
+    <string name="day_mon">Sen</string>
+    <string name="day_tue">Sel</string>
+    <string name="day_wed">Rab</string>
+    <string name="day_thu">Kam</string>
+    <string name="day_fri">Jum</string>
+    <string name="day_sat">Sab</string>
+    <string name="day_sun">Min</string>
+    <string name="default_values_banner_title">Kelola Preset Acuan Awal</string>
+    <string name="default_values_banner_desc">Preset aktif otomatis mengisi (pre-fill) form koordinat baru dan menyediakan tombol cepat \'Terapkan dari Preset\'.</string>
+    <string name="default_values_add_preset">Tambah Preset</string>
+    <string name="default_values_dialog_add_title">Tambah Preset Baru</string>
+    <string name="default_values_dialog_edit_title">Edit Preset: %s</string>
+    <string name="default_values_accuracy_hint">1 meter ≈ 3.28 ft. Mengubah meter otomatis mengubah ft, begitu pula sebaliknya.</string>
+    <string name="default_values_altitude_hint">Ketinggian di atas permukaan laut. Input meter atau feet disinkronkan dua arah.</string>
+    <string name="default_values_compass_follow">Ikuti Sensor Kompas HP</string>
+    <string name="default_values_sensor_active">Sensor Aktif: %s°</string>
+    <string name="default_values_compass_unavailable">Sensor kompas fisik tidak terdeteksi pada device</string>
+    <string name="alarm_notification_default_title">Pengingat GPS Mirage</string>
+    <string name="alarm_notification_default_body">Waktunya membuka dan menjalankan aplikasi GPS Mirage.</string>
+    <string name="alarm_notification_open_app">Buka Aplikasi</string>
 </resources>

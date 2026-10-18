@@ -41,6 +41,9 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.dhikadityre.gpsmirage.core.model.ReminderAlarm
 
+import androidx.compose.ui.res.stringResource
+import com.dhikadityre.dev.tools.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmSchedulerScreen(
@@ -84,7 +87,7 @@ fun AlarmSchedulerScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Alarm & Jadwal Notifikasi",
+                        text = stringResource(R.string.alarm_scheduler_title),
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -92,7 +95,7 @@ fun AlarmSchedulerScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -100,7 +103,7 @@ fun AlarmSchedulerScreen(
                     IconButton(onClick = { viewModel.openCreateDialog() }) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Tambah Alarm"
+                            contentDescription = stringResource(R.string.alarm_add_alarm)
                         )
                     }
                 }
@@ -112,7 +115,7 @@ fun AlarmSchedulerScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Jadwal")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.alarm_add_schedule))
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -201,15 +204,15 @@ fun AlarmSchedulerScreen(
                             Spacer(Modifier.width(14.dp))
                             Column {
                                 Text(
-                                    text = "Semua Alarm Aktif",
+                                    text = stringResource(R.string.alarm_all_active),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
                                     text = if (uiState.isMasterEnabled) {
-                                        "Seluruh alarm berjalan sesuai jadwal"
+                                        stringResource(R.string.alarm_all_active_desc)
                                     } else {
-                                        "Semua jadwal alarm sedang dinonaktifkan"
+                                        stringResource(R.string.alarm_all_disabled_desc)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -232,7 +235,7 @@ fun AlarmSchedulerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "DAFTAR JADWAL PENGINGAT (${uiState.alarms.size})",
+                        text = stringResource(R.string.alarm_schedule_list_title, uiState.alarms.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -284,13 +287,17 @@ fun AlarmSchedulerScreen(
             onDismissRequest = { viewModel.dismissDeleteDialog() },
             title = {
                 Text(
-                    text = "Hapus Jadwal Alarm?",
+                    text = stringResource(R.string.alarm_delete_title),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "Apakah Anda yakin ingin menghapus alarm '${alarm.label}' (${alarm.formattedTime})? Tindakan ini tidak dapat dibatalkan.",
+                    text = stringResource(
+                        R.string.alarm_delete_confirm,
+                        alarm.label,
+                        alarm.formattedTime
+                    ),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -301,12 +308,12 @@ fun AlarmSchedulerScreen(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Hapus")
+                    Text(stringResource(R.string.action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissDeleteDialog() }) {
-                    Text("Batal")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -395,7 +402,7 @@ private fun AlarmCard(
                     }
                 ) {
                     Text(
-                        text = alarm.repeatSummary,
+                        text = alarm.localizedRepeatSummary(),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (alarm.isEnabled) {
                             MaterialTheme.colorScheme.onSecondaryContainer
@@ -414,7 +421,7 @@ private fun AlarmCard(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Edit",
+                            contentDescription = stringResource(R.string.action_edit),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -426,7 +433,7 @@ private fun AlarmCard(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Hapus",
+                            contentDescription = stringResource(R.string.action_delete),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
                         )
@@ -478,12 +485,16 @@ private fun AlarmEditDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (initialAlarm.id == 0L) "Tambah Jadwal Alarm" else "Edit Jadwal Alarm",
+                        text = if (initialAlarm.id == 0L) {
+                            stringResource(R.string.alarm_dialog_create_title)
+                        } else {
+                            stringResource(R.string.alarm_dialog_edit_title)
+                        },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close))
                     }
                 }
 
@@ -502,8 +513,8 @@ private fun AlarmEditDialog(
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Label / Keterangan") },
-                    placeholder = { Text("Contoh: Absen Pagi / Shift Siang") },
+                    label = { Text(stringResource(R.string.alarm_label_field)) },
+                    placeholder = { Text(stringResource(R.string.alarm_label_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
@@ -511,7 +522,7 @@ private fun AlarmEditDialog(
 
                 // Quick Presets
                 Text(
-                    text = "PILIHAN PENGULANGAN",
+                    text = stringResource(R.string.alarm_repeat_section),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -525,34 +536,34 @@ private fun AlarmEditDialog(
                     FilterChip(
                         selected = selectedDays == setOf(1, 2, 3, 4, 5),
                         onClick = { selectedDays = setOf(1, 2, 3, 4, 5) },
-                        label = { Text("Hari Kerja", fontSize = 11.sp) }
+                        label = { Text(stringResource(R.string.alarm_repeat_weekdays), fontSize = 11.sp) }
                     )
                     FilterChip(
                         selected = selectedDays == setOf(6, 7),
                         onClick = { selectedDays = setOf(6, 7) },
-                        label = { Text("Akhir Pekan", fontSize = 11.sp) }
+                        label = { Text(stringResource(R.string.alarm_repeat_weekends), fontSize = 11.sp) }
                     )
                     FilterChip(
                         selected = selectedDays.size == 7,
                         onClick = { selectedDays = setOf(1, 2, 3, 4, 5, 6, 7) },
-                        label = { Text("Setiap Hari", fontSize = 11.sp) }
+                        label = { Text(stringResource(R.string.alarm_repeat_everyday), fontSize = 11.sp) }
                     )
                     FilterChip(
                         selected = selectedDays.isEmpty(),
                         onClick = { selectedDays = emptySet() },
-                        label = { Text("Sekali Saja", fontSize = 11.sp) }
+                        label = { Text(stringResource(R.string.alarm_repeat_once), fontSize = 11.sp) }
                     )
                 }
 
-                // Days Selection Chips (Sen s/d Min)
+                // Days Selection Chips (Mon to Sun)
                 val daysList = listOf(
-                    1 to "Sen",
-                    2 to "Sel",
-                    3 to "Rab",
-                    4 to "Kam",
-                    5 to "Jum",
-                    6 to "Sab",
-                    7 to "Min"
+                    1 to stringResource(R.string.day_mon),
+                    2 to stringResource(R.string.day_tue),
+                    3 to stringResource(R.string.day_wed),
+                    4 to stringResource(R.string.day_thu),
+                    5 to stringResource(R.string.day_fri),
+                    6 to stringResource(R.string.day_sat),
+                    7 to stringResource(R.string.day_sun)
                 )
 
                 Row(
@@ -607,7 +618,7 @@ private fun AlarmEditDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Batal")
+                        Text(stringResource(R.string.action_cancel))
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(
@@ -621,7 +632,7 @@ private fun AlarmEditDialog(
                         },
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Simpan Alarm")
+                        Text(stringResource(R.string.alarm_save_button))
                     }
                 }
             }
@@ -663,7 +674,7 @@ private fun EmptyAlarmState(onAddClick: () -> Unit) {
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "Belum Ada Jadwal Alarm",
+                text = stringResource(R.string.alarm_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -671,7 +682,7 @@ private fun EmptyAlarmState(onAddClick: () -> Unit) {
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "Tambahkan jadwal pengingat untuk membantu Anda membuka dan mengaktifkan GPS Mirage sesuai jam kerja atau absen rutin Anda.",
+                text = stringResource(R.string.alarm_empty_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 8.dp)
@@ -685,7 +696,7 @@ private fun EmptyAlarmState(onAddClick: () -> Unit) {
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Tambah Pengingat Pertama")
+                Text(stringResource(R.string.alarm_add_first))
             }
         }
     }
@@ -715,13 +726,13 @@ private fun NotificationPermissionBanner(onRequestPermission: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Izin Notifikasi Dibutuhkan",
+                    text = stringResource(R.string.alarm_notif_perm_title),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
                 Text(
-                    text = "Izinkan aplikasi menampilkan notifikasi agar pengingat jadwal dapat berbunyi.",
+                    text = stringResource(R.string.alarm_notif_perm_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
                 )
@@ -734,7 +745,7 @@ private fun NotificationPermissionBanner(onRequestPermission: () -> Unit) {
                 ),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Text("Izinkan", fontSize = 12.sp)
+                Text(stringResource(R.string.alarm_notif_perm_grant), fontSize = 12.sp)
             }
         }
     }
@@ -764,13 +775,13 @@ private fun ExactAlarmBanner(onOpenSettings: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Izin Alarm Tepat Waktu (Exact)",
+                    text = stringResource(R.string.alarm_exact_perm_title),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
                 Text(
-                    text = "Aktifkan izin Exact Alarm di pengaturan sistem agar alarm berbunyi tepat detik yang ditentukan.",
+                    text = stringResource(R.string.alarm_exact_perm_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
                 )
@@ -780,8 +791,27 @@ private fun ExactAlarmBanner(onOpenSettings: () -> Unit) {
                 onClick = onOpenSettings,
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                Text("Buka", fontSize = 12.sp)
+                Text(stringResource(R.string.alarm_exact_perm_open), fontSize = 12.sp)
             }
         }
     }
+}
+
+@Composable
+private fun ReminderAlarm.localizedRepeatSummary(): String {
+    if (daysOfWeek.isEmpty()) return stringResource(R.string.alarm_repeat_once)
+    if (daysOfWeek.size == 7) return stringResource(R.string.alarm_repeat_everyday)
+    if (daysOfWeek == setOf(1, 2, 3, 4, 5)) return stringResource(R.string.alarm_repeat_weekdays)
+    if (daysOfWeek == setOf(6, 7)) return stringResource(R.string.alarm_repeat_weekends)
+
+    val dayNames = mapOf(
+        1 to stringResource(R.string.day_mon),
+        2 to stringResource(R.string.day_tue),
+        3 to stringResource(R.string.day_wed),
+        4 to stringResource(R.string.day_thu),
+        5 to stringResource(R.string.day_fri),
+        6 to stringResource(R.string.day_sat),
+        7 to stringResource(R.string.day_sun)
+    )
+    return daysOfWeek.sorted().mapNotNull { dayNames[it] }.joinToString(", ")
 }

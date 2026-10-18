@@ -12,9 +12,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dhikadityre.dev.tools.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +29,7 @@ fun MoreScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "More",
+                        text = stringResource(R.string.more_title),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -42,15 +44,15 @@ fun MoreScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             MoreMenuCard(
-                title = "Tampilan & Tema",
-                subtitle = "Pilihan layer peta (Google Maps/OSM), notifikasi status bar, bahasa, dan dark/light mode.",
+                title = stringResource(R.string.more_appearance_title),
+                subtitle = stringResource(R.string.more_appearance_desc),
                 icon = Icons.Default.Palette,
                 onClick = onNavigateToAppearance
             )
 
             MoreMenuCard(
-                title = "Tentang Aplikasi",
-                subtitle = "Nomor versi aplikasi (Hero display), profil developer Dhikadityre, dan tujuan sistem.",
+                title = stringResource(R.string.more_about_title),
+                subtitle = stringResource(R.string.more_about_desc),
                 icon = Icons.Default.Info,
                 onClick = onNavigateToAbout
             )

@@ -63,6 +63,7 @@ class NativeGpsViewModelTest {
         override suspend fun updateFolder(id: Long, folderId: Long?) {}
         override suspend fun updateParentAnchor(id: Long, parentAnchorId: Long?) {}
         override suspend fun delete(id: Long) {}
+        override suspend fun deleteMultiple(ids: List<Long>, deleteLinkedChildren: Boolean) {}
         override suspend fun isDuplicate(name: String, latitude: Double, longitude: Double): Boolean = false
     }
 

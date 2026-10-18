@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import com.dhikadityre.dev.tools.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +57,7 @@ fun EligibilityScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Status Fake GPS",
+                        text = stringResource(R.string.eligibility_title),
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -63,7 +65,7 @@ fun EligibilityScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -71,7 +73,7 @@ fun EligibilityScreen(
                     IconButton(onClick = { viewModel.refreshEligibility() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Muat Ulang"
+                            contentDescription = stringResource(R.string.action_retry)
                         )
                     }
                 }
@@ -134,7 +136,11 @@ fun EligibilityScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isFullyEligible) "Sistem Eligible & Siap" else "Perlu Tindakan",
+                            text = if (isFullyEligible) {
+                                stringResource(R.string.eligibility_system_ready)
+                            } else {
+                                stringResource(R.string.eligibility_action_required)
+                            },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = if (isFullyEligible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
@@ -142,9 +148,9 @@ fun EligibilityScreen(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = if (isFullyEligible) {
-                                "Semua prasyarat mock location terpenuhi. Aplikasi siap digunakan untuk simulasi titik koordinat."
+                                stringResource(R.string.eligibility_ready_desc)
                             } else {
-                                "Terdapat prasyarat yang belum aktif. Ketuk tombol pada item di bawah untuk mengonfigurasinya."
+                                stringResource(R.string.eligibility_not_ready_desc)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -154,7 +160,7 @@ fun EligibilityScreen(
             }
 
             Text(
-                text = "PILIHAN EVALUASI KELAYAKAN SISTEM",
+                text = stringResource(R.string.eligibility_section_title),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
@@ -163,12 +169,16 @@ fun EligibilityScreen(
 
             // PILLAR 1: DEVELOPER OPTIONS
             PillarDiagnosticCard(
-                title = "1. Opsi Pengembang (Developer Options)",
-                subtitle = "Prasyarat utama Android untuk mengizinkan penetapan aplikasi mock location.",
+                title = stringResource(R.string.eligibility_dev_options_title),
+                subtitle = stringResource(R.string.eligibility_dev_options_desc),
                 isPassed = report?.isDeveloperOptionsEnabled == true,
-                statusText = if (report?.isDeveloperOptionsEnabled == true) "Aktif" else "Tidak Aktif",
+                statusText = if (report?.isDeveloperOptionsEnabled == true) {
+                    stringResource(R.string.eligibility_status_active)
+                } else {
+                    stringResource(R.string.eligibility_status_inactive)
+                },
                 icon = Icons.Default.Code,
-                actionLabel = "Buka Opsi Pengembang",
+                actionLabel = stringResource(R.string.eligibility_dev_options_btn),
                 onActionClick = {
                     launchSettings(context, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
                 }
@@ -176,12 +186,16 @@ fun EligibilityScreen(
 
             // PILLAR 2: MOCK LOCATION APP PROVIDER
             PillarDiagnosticCard(
-                title = "2. Aplikasi Lokasi Tiruan (Mock App)",
-                subtitle = "GPS Mirage harus ditetapkan sebagai penyedia lokasi tiruan di Opsi Pengembang.",
+                title = stringResource(R.string.eligibility_mock_app_title),
+                subtitle = stringResource(R.string.eligibility_mock_app_desc),
                 isPassed = report?.isMockAppSet == true,
-                statusText = if (report?.isMockAppSet == true) "GPS Mirage Terpilih" else "Belum Ditetapkan",
+                statusText = if (report?.isMockAppSet == true) {
+                    stringResource(R.string.eligibility_mock_app_selected)
+                } else {
+                    stringResource(R.string.eligibility_mock_app_not_set)
+                },
                 icon = Icons.Default.VerifiedUser,
-                actionLabel = "Atur Mock Location App",
+                actionLabel = stringResource(R.string.eligibility_mock_app_btn),
                 onActionClick = {
                     launchSettings(context, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
                 }
@@ -189,12 +203,16 @@ fun EligibilityScreen(
 
             // PILLAR 3: DEVICE GPS SENSOR
             PillarDiagnosticCard(
-                title = "3. Sensor GPS Fisik (Location Service)",
-                subtitle = "Layanan lokasi hardware perangkat harus dalam kondisi menyala/aktif.",
+                title = stringResource(R.string.eligibility_gps_title),
+                subtitle = stringResource(R.string.eligibility_gps_desc),
                 isPassed = report?.isGpsEnabled == true,
-                statusText = if (report?.isGpsEnabled == true) "GPS Aktif" else "Layanan Lokasi Nonaktif",
+                statusText = if (report?.isGpsEnabled == true) {
+                    stringResource(R.string.eligibility_gps_active)
+                } else {
+                    stringResource(R.string.eligibility_gps_inactive)
+                },
                 icon = Icons.Default.GpsFixed,
-                actionLabel = "Buka Pengaturan Lokasi",
+                actionLabel = stringResource(R.string.eligibility_gps_btn),
                 onActionClick = {
                     launchSettings(context, Settings.ACTION_LOCATION_SOURCE_SETTINGS)
                 }
@@ -202,12 +220,16 @@ fun EligibilityScreen(
 
             // PILLAR 4: LOCATION PERMISSIONS
             PillarDiagnosticCard(
-                title = "4. Izin Lokasi Perangkat",
-                subtitle = "Izin ACCESS_FINE_LOCATION diperlukan untuk membaca dan memvalidasi koordinat.",
+                title = stringResource(R.string.eligibility_permission_title),
+                subtitle = stringResource(R.string.eligibility_permission_desc),
                 isPassed = report?.hasLocationPermission == true,
-                statusText = if (report?.hasLocationPermission == true) "Izin Diberikan" else "Izin Belum Lengkap",
+                statusText = if (report?.hasLocationPermission == true) {
+                    stringResource(R.string.eligibility_permission_granted)
+                } else {
+                    stringResource(R.string.eligibility_permission_missing)
+                },
                 icon = Icons.Default.LocationOn,
-                actionLabel = "Beri Izin Aplikasi",
+                actionLabel = stringResource(R.string.eligibility_permission_btn),
                 onActionClick = {
                     launchAppDetailsSettings(context)
                 }
@@ -215,10 +237,14 @@ fun EligibilityScreen(
 
             // PILLAR 5: ROOT STATUS
             PillarDiagnosticCard(
-                title = "5. Status Deteksi Root (Superuser)",
-                subtitle = "Pemeriksaan biner su dan build test-keys perangkat.",
+                title = stringResource(R.string.eligibility_root_title),
+                subtitle = stringResource(R.string.eligibility_root_desc),
                 isPassed = true, // Both rooted & non-rooted are supported!
-                statusText = if (report?.isDeviceRooted == true) "Root Terdeteksi" else "Non-Rooted (Standar Android)",
+                statusText = if (report?.isDeviceRooted == true) {
+                    stringResource(R.string.eligibility_root_detected)
+                } else {
+                    stringResource(R.string.eligibility_root_not_detected)
+                },
                 icon = Icons.Default.Security,
                 badgeColor = if (report?.isDeviceRooted == true) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
                 actionLabel = null,
@@ -241,7 +267,7 @@ fun EligibilityScreen(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Periksa Ulang Kesiapan",
+                    text = stringResource(R.string.eligibility_recheck),
                     fontWeight = FontWeight.Bold
                 )
             }

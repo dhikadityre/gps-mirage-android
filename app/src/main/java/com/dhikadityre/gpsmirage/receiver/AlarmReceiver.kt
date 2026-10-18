@@ -101,8 +101,8 @@ class AlarmReceiver : BroadcastReceiver() {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher)
-            .setContentTitle(if (label.isNotBlank()) label else "Pengingat GPS Mirage")
-            .setContentText("Waktunya membuka dan menjalankan aplikasi GPS Mirage.")
+            .setContentTitle(if (label.isNotBlank()) label else context.getString(R.string.alarm_notification_default_title))
+            .setContentText(context.getString(R.string.alarm_notification_default_body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
@@ -111,7 +111,7 @@ class AlarmReceiver : BroadcastReceiver() {
             .setContentIntent(openAppPendingIntent)
             .addAction(
                 R.drawable.ic_launcher,
-                "Buka Aplikasi",
+                context.getString(R.string.alarm_notification_open_app),
                 openAppPendingIntent
             )
             .build()

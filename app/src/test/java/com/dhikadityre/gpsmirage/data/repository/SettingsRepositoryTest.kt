@@ -106,7 +106,7 @@ class SettingsRepositoryTest {
 
         assertEquals(com.dhikadityre.gpsmirage.core.model.MapLayerStyle.GOOGLE_ROADMAP, config.mapStyle)
         assertTrue(config.showStatusBarNotification)
-        assertEquals(com.dhikadityre.gpsmirage.core.model.AppLanguage.INDONESIAN, config.language)
+        assertEquals(com.dhikadityre.gpsmirage.core.model.AppLanguage.ENGLISH, config.language)
         assertEquals(com.dhikadityre.gpsmirage.core.model.AppThemeMode.SYSTEM, config.themeMode)
     }
 

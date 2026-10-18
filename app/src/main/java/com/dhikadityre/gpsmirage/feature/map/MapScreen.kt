@@ -112,6 +112,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -435,9 +436,9 @@ fun MapScreen(
                         )
                         Text(
                             text = if (uiState.selectionMode == MapSelectionMode.CENTER_PIN) {
-                                "Geser peta untuk membidik titik lokasi di dalam radius Mayapada"
+                                stringResource(R.string.map_hint_pan_pin)
                             } else {
-                                "Ketuk peta untuk memilih titik lokasi di dalam radius Mayapada"
+                                stringResource(R.string.map_hint_tap_select)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -645,9 +646,9 @@ private fun OsmMapView(
             // In CENTER_PIN mode when not locked, the pin is rendered via Compose CenterPinOverlay
             if (selectedCoordinate != null && (selectionMode == MapSelectionMode.TAP_TO_SELECT || isPositionLocked)) {
                 val titleText = when {
-                    isResolvingAddress -> "Mendeteksi nama jalan..."
+                    isResolvingAddress -> mapView.context.getString(R.string.map_detecting_street)
                     !resolvedShortAddress.isNullOrBlank() -> resolvedShortAddress
-                    else -> "Lokasi Terpilih"
+                    else -> mapView.context.getString(R.string.map_selected_location)
                 }
                 val snippetText = "%.5f, %.5f".format(
                     selectedCoordinate.latitude,
@@ -805,7 +806,7 @@ private fun MockActiveBanner(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Map,
-                            contentDescription = "Buka Google Maps",
+                            contentDescription = stringResource(R.string.map_open_in_google_maps),
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(Modifier.width(4.dp))
@@ -927,16 +928,17 @@ private fun SelectedCoordinateCard(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = "Mendeteksi nama jalan...",
+                                        text = stringResource(R.string.map_detecting_street),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             } else {
+                                val notDetectedText = stringResource(R.string.map_street_not_detected)
                                 val displayName = when {
                                     nameInput.isNotBlank() && nameInput != "Unnamed Location" -> nameInput
                                     !resolvedShortAddress.isNullOrBlank() -> resolvedShortAddress
-                                    else -> "Nama jalan tidak terdeteksi"
+                                    else -> notDetectedText
                                 }
                                 Text(
                                     text = displayName,
@@ -964,7 +966,11 @@ private fun SelectedCoordinateCard(
                     ) {
                         Icon(
                             imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.Edit,
-                            contentDescription = if (isExpanded) "Tutup edit nama" else "Ubah nama lokasi",
+                            contentDescription = if (isExpanded) {
+                                stringResource(R.string.map_close_edit_name)
+                            } else {
+                                stringResource(R.string.map_edit_name)
+                            },
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -992,14 +998,14 @@ private fun SelectedCoordinateCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "Posisi Terkunci",
+                            text = stringResource(R.string.map_position_locked),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
-                            text = "Ketuk untuk buka kunci",
+                            text = stringResource(R.string.map_tap_to_unlock),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
@@ -1019,7 +1025,7 @@ private fun SelectedCoordinateCard(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Buka di Google Maps",
+                        text = stringResource(R.string.map_open_in_google_maps),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1035,7 +1041,7 @@ private fun SelectedCoordinateCard(
                     value = nameInput,
                     onValueChange = { nameInput = it },
                     label = { Text("Location name") },
-                    placeholder = { Text("Nama lokasi") },
+                    placeholder = { Text(stringResource(R.string.location_name)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { isExpanded = false }),
@@ -1067,14 +1073,14 @@ private fun SelectedCoordinateCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "Di luar batas radius",
+                                text = stringResource(R.string.map_outside_radius),
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                         Text(
-                            text = "Jarak ke acuan: ${distanceToAnchorMeters.toInt()} meter",
+                            text = stringResource(R.string.map_distance_to_anchor, distanceToAnchorMeters.toInt()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -1092,13 +1098,13 @@ private fun SelectedCoordinateCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Jarak ke acuan: ${distanceToAnchorMeters.toInt()} meter",
+                            text = stringResource(R.string.map_distance_to_anchor, distanceToAnchorMeters.toInt()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = "Batas: ${radiusConfig.radiusMeters.toInt()}m",
+                            text = stringResource(R.string.map_radius_limit, radiusConfig.radiusMeters.toInt()),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -1421,9 +1427,9 @@ private fun MapFloatingControls(
                         Icons.Default.TouchApp
                     },
                     contentDescription = if (selectionMode == MapSelectionMode.CENTER_PIN) {
-                        "Mode Bidik Tengah (Aktif)"
+                        stringResource(R.string.map_mode_center_pin_active)
                     } else {
-                        "Mode Ketuk Bebas (Aktif)"
+                        stringResource(R.string.map_mode_tap_select_active)
                     },
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -1436,7 +1442,11 @@ private fun MapFloatingControls(
             ) {
                 Icon(
                     imageVector = if (isPositionLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = if (isPositionLocked) "Buka Kunci Posisi" else "Kunci Posisi",
+                    contentDescription = if (isPositionLocked) {
+                        stringResource(R.string.map_unlock_position)
+                    } else {
+                        stringResource(R.string.map_lock_position)
+                    },
                     tint = if (isPositionLocked) {
                         MaterialTheme.colorScheme.error
                     } else {
@@ -1453,7 +1463,11 @@ private fun MapFloatingControls(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Undo,
-                    contentDescription = if (isRewindEnabled) "Kembalikan Posisi (Rewind)" else "Rewind Tidak Tersedia",
+                    contentDescription = if (isRewindEnabled) {
+                        stringResource(R.string.map_rewind_position)
+                    } else {
+                        stringResource(R.string.map_rewind_unavailable)
+                    },
                     tint = if (isRewindEnabled) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -1469,7 +1483,7 @@ private fun MapFloatingControls(
             ) {
                 Icon(
                     imageVector = Icons.Default.MyLocation,
-                    contentDescription = "Pusatkan ke Titik Acuan",
+                    contentDescription = stringResource(R.string.map_recenter_anchor),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -1543,7 +1557,7 @@ private fun CenterPinOverlay(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Mencari jalan...",
+                                text = stringResource(R.string.map_searching_street),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

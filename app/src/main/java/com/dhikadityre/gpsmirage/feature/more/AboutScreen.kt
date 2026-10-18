@@ -16,12 +16,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dhikadityre.dev.tools.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +38,7 @@ fun AboutScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Tentang Aplikasi",
+                        text = stringResource(R.string.more_about_title),
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -44,7 +46,7 @@ fun AboutScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 }
@@ -101,7 +103,7 @@ fun AboutScreen(
                     )
 
                     Text(
-                        text = "Precision Mock Geolocation & Geofence Simulator",
+                        text = stringResource(R.string.about_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -120,7 +122,7 @@ fun AboutScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Versi ${uiState.versionName}",
+                                text = stringResource(R.string.about_version, uiState.versionName),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onPrimary,
@@ -128,7 +130,7 @@ fun AboutScreen(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                text = "Build ${uiState.versionCode} • Target SDK ${uiState.targetSdk} (Android 15)",
+                                text = stringResource(R.string.about_build_target, uiState.versionCode, uiState.targetSdk),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
                             )
@@ -143,11 +145,11 @@ fun AboutScreen(
                     ) {
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("Min SDK ${uiState.minSdk} (Marshmallow)", fontSize = 11.sp) }
+                            label = { Text(stringResource(R.string.about_min_sdk, uiState.minSdk), fontSize = 11.sp) }
                         )
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("Offline-First", fontSize = 11.sp) }
+                            label = { Text(stringResource(R.string.about_tag_offline), fontSize = 11.sp) }
                         )
                     }
                 }
@@ -156,34 +158,34 @@ fun AboutScreen(
             // SECTION 1: TUJUAN APLIKASI
             AboutInfoCard(
                 icon = Icons.Default.TrackChanges,
-                title = "Tujuan Aplikasi",
+                title = stringResource(R.string.about_app_purpose_title),
                 accentColor = MaterialTheme.colorScheme.primary
             ) {
                 Text(
-                    text = uiState.appPurpose,
+                    text = stringResource(R.string.about_app_purpose_content),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = "Fitur Unggulan Sistem:",
+                    text = stringResource(R.string.about_features_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(4.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    BulletPoint("Batas simulasi geofence akurat dengan titik acuan Center Anchor.")
-                    BulletPoint("Pengujian fungsionalitas lokasi tanpa berpindah tempat fisik.")
-                    BulletPoint("Preset parameter akurasi, ketinggian, kecepatan, dan bearing.")
-                    BulletPoint("Otomasi multi-stage map rewind, generator titik, dan reminder.")
+                    BulletPoint(stringResource(R.string.about_feature_1))
+                    BulletPoint(stringResource(R.string.about_feature_2))
+                    BulletPoint(stringResource(R.string.about_feature_3))
+                    BulletPoint(stringResource(R.string.about_feature_4))
                 }
             }
 
             // SECTION 2: DEVELOPER DI BALIKNYA
             AboutInfoCard(
                 icon = Icons.Default.Code,
-                title = "Developer di Baliknya",
+                title = stringResource(R.string.about_developer_title),
                 accentColor = MaterialTheme.colorScheme.secondary
             ) {
                 Text(
@@ -193,13 +195,13 @@ fun AboutScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = uiState.developerRole,
+                    text = stringResource(R.string.about_developer_role),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Aplikasi ini dirancang dengan Clean Architecture dan Material 3, mengintegrasikan mesin OpenStreetMap (OSMDroid), Dagger Hilt, dan Room Database dengan standar kompatibilitas mundur penuh dari Android 6.0 Marshmallow hingga Android 15.",
+                    text = stringResource(R.string.about_developer_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -208,11 +210,11 @@ fun AboutScreen(
             // SECTION 3: KEAMANAN & PRIVASI DATA
             AboutInfoCard(
                 icon = Icons.Default.Security,
-                title = "Keamanan & Privasi Data",
+                title = stringResource(R.string.about_security_title),
                 accentColor = MaterialTheme.colorScheme.tertiary
             ) {
                 Text(
-                    text = "GPS Mirage beroperasi 100% lokal pada perangkat pengguna (client-side execution). Seluruh data titik koordinat tersimpan, folder, log histori, dan profil nilai default disimpan murni di database internal SQLite perangkat Anda dan tidak dikirim ke server pihak ketiga mana pun.",
+                    text = stringResource(R.string.about_security_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -222,7 +224,7 @@ fun AboutScreen(
 
             // FOOTER
             Text(
-                text = "© 2026 Dhikadityre • All Rights Reserved",
+                text = stringResource(R.string.about_copyright),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,

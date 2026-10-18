@@ -27,11 +27,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dhikadityre.dev.tools.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +75,7 @@ fun ToolsScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Reset Fake GPS",
+                        text = stringResource(R.string.tools_dialog_reset_title),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -81,7 +83,7 @@ fun ToolsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Pilih mode pemulihan koordinat dan sistem mock:",
+                        text = stringResource(R.string.tools_dialog_reset_subtitle),
                         style = MaterialTheme.typography.bodyMedium
                     )
 
@@ -91,14 +93,14 @@ fun ToolsScreen(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
-                                text = "1. Soft Reset",
+                                text = stringResource(R.string.tools_dialog_soft_reset_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = "Hanya menghentikan mock dan melepas test provider. GPS fisik asli HP pulih normal tanpa mengubah posisi camera/pin peta saat ini.",
+                                text = stringResource(R.string.tools_dialog_soft_reset_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -111,14 +113,14 @@ fun ToolsScreen(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
-                                text = "2. Hard Reset",
+                                text = stringResource(R.string.tools_dialog_hard_reset_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.error
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = "Hentikan mock, lepas provider, pulihkan GPS fisik, kembalikan posisi camera & pin peta ke Center Anchor, serta reset status Lock dan Rewind.",
+                                text = stringResource(R.string.tools_dialog_hard_reset_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -136,13 +138,13 @@ fun ToolsScreen(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Hard Reset")
+                    Text(stringResource(R.string.tools_dialog_hard_reset_btn))
                 }
             },
             dismissButton = {
                 Row {
                     TextButton(onClick = { showResetDialog = false }) {
-                        Text("Batal")
+                        Text(stringResource(R.string.action_cancel))
                     }
                     Spacer(Modifier.width(8.dp))
                     OutlinedButton(
@@ -151,7 +153,7 @@ fun ToolsScreen(
                             onSoftReset()
                         }
                     ) {
-                        Text("Soft Reset")
+                        Text(stringResource(R.string.tools_dialog_soft_reset_btn))
                     }
                 }
             }
@@ -170,13 +172,13 @@ fun ToolsScreen(
             },
             title = {
                 Text(
-                    text = "Fake GPS Sedang Aktif",
+                    text = stringResource(R.string.tools_dialog_mock_running_title),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "Fake GPS sedang berjalan di latar belakang. Untuk membaca koordinat fisik riil dari hardware perangkat, Anda harus melakukan Hard Reset terlebih dahulu agar test provider dilepas dan GPS fisik dipulihkan.",
+                    text = stringResource(R.string.tools_dialog_mock_running_desc),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -185,12 +187,12 @@ fun ToolsScreen(
                     onClick = { viewModel.confirmHardResetFromNativeGps() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Hard Reset GPS")
+                    Text(stringResource(R.string.tools_dialog_hard_reset_gps_btn))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissMockRunningWarning() }) {
-                    Text("Batal")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -208,14 +210,14 @@ fun ToolsScreen(
             },
             title = {
                 Text(
-                    text = "Verifikasi Lokasi Asli",
+                    text = stringResource(R.string.tools_dialog_verify_location_title),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "GPS fisik berhasil dipulihkan! Apakah Anda ingin membuka Google Maps sekarang untuk memverifikasi lokasi fisik Anda?",
+                        text = stringResource(R.string.tools_dialog_verify_location_desc),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Surface(
@@ -224,7 +226,7 @@ fun ToolsScreen(
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
                         Text(
-                            text = "Otomatis ditutup dalam ${uiState.verificationCountdown} detik...",
+                            text = stringResource(R.string.tools_dialog_verify_countdown, uiState.verificationCountdown),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
@@ -240,12 +242,12 @@ fun ToolsScreen(
                         launchGoogleMaps(context)
                     }
                 ) {
-                    Text("Buka Google Maps")
+                    Text(stringResource(R.string.tools_dialog_open_gmaps_btn))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissGoogleMapsVerification() }) {
-                    Text("Tidak")
+                    Text(stringResource(R.string.tools_dialog_no_btn))
                 }
             }
         )
@@ -256,7 +258,7 @@ fun ToolsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Tools",
+                        text = stringResource(R.string.tools_title),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -274,22 +276,22 @@ fun ToolsScreen(
         ) {
             // SECTION 1: BASELINE
             SectionHeader(
-                title = "BASELINE",
-                description = "Diagnostik kelayakan sistem fake GPS dan pencatatan telemetri perangkat asli."
+                title = stringResource(R.string.tools_section_baseline_title),
+                description = stringResource(R.string.tools_section_baseline_desc)
             )
 
             ToolItemCard(
-                title = "Status Fake GPS",
-                description = "Pemeriksaan otomatis kesiapan mock location, opsi pengembang, izin, dan deteksi root.",
-                badge = "Diagnostic",
+                title = stringResource(R.string.tools_item_eligibility_title),
+                description = stringResource(R.string.tools_item_eligibility_desc),
+                badge = stringResource(R.string.tools_item_eligibility_badge),
                 icon = Icons.Default.VerifiedUser,
                 onClick = onNavigateToEligibility
             )
 
             ToolItemCard(
-                title = "Native GPS",
-                description = "Simulasi pembacaan data GPS fisik asli perangkat (Lat, Lng, Akurasi, Altitude, Speed, Bearing) tanpa mock.",
-                badge = "Hardware",
+                title = stringResource(R.string.tools_item_native_gps_title),
+                description = stringResource(R.string.tools_item_native_gps_desc),
+                badge = stringResource(R.string.tools_item_native_gps_badge),
                 icon = Icons.Default.GpsFixed,
                 onClick = {
                     viewModel.onNativeGpsClicked(
@@ -302,57 +304,57 @@ fun ToolsScreen(
 
             // SECTION 2: INTERCEPT GPS
             SectionHeader(
-                title = "INTERCEPT GPS",
-                description = "Kontrol intersep sinyal GPS, pemulihan perangkat, panduan setup, dan manajemen nilai default."
+                title = stringResource(R.string.tools_section_intercept_title),
+                description = stringResource(R.string.tools_section_intercept_desc)
             )
 
             ToolItemCard(
-                title = "Reset Fake GPS",
-                description = "Pulihkan GPS fisik asli perangkat dan kembalikan setelan mock ke kondisi awal (Soft / Hard Reset).",
-                badge = "Dual-Mode",
+                title = stringResource(R.string.tools_item_reset_title),
+                description = stringResource(R.string.tools_item_reset_desc),
+                badge = stringResource(R.string.tools_item_reset_badge),
                 icon = Icons.Default.RestartAlt,
                 onClick = { showResetDialog = true }
             )
 
             ToolItemCard(
-                title = "Cara Setup",
-                description = "Panduan aktivasi Opsi Pengembang (Developer Options) dan penetapan Mock Location App.",
+                title = stringResource(R.string.tools_item_setup_title),
+                description = stringResource(R.string.tools_item_setup_desc),
                 icon = Icons.AutoMirrored.Filled.HelpOutline,
                 onClick = onNavigateToSetupGuide
             )
 
             ToolItemCard(
-                title = "Geofence Radius",
-                description = "Atur batas area pemilihan mock location dan koordinat titik acuan (Center Anchor).",
+                title = stringResource(R.string.tools_item_geofence_title),
+                description = stringResource(R.string.tools_item_geofence_desc),
                 icon = Icons.Default.Adjust,
                 onClick = onNavigateToGeofenceRadius
             )
 
             ToolItemCard(
-                title = "Default Values",
-                description = "Kelola profil nilai default bawaan (original) untuk autocompletion form input koordinat.",
+                title = stringResource(R.string.tools_item_default_values_title),
+                description = stringResource(R.string.tools_item_default_values_desc),
                 icon = Icons.Default.Tune,
                 onClick = onNavigateToDefaultValues
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-            // SECTION 2: AUTOMATION
+            // SECTION 3: AUTOMATION
             SectionHeader(
-                title = "AUTOMATION",
-                description = "Otomasi pembuatan titik koordinat dan jadwal pengingat rutin aplikasi."
+                title = stringResource(R.string.tools_section_automation_title),
+                description = stringResource(R.string.tools_section_automation_desc)
             )
 
             ToolItemCard(
-                title = "Coordinate Generator",
-                description = "Hasilkan kumpulan koordinat acak/terdistribusi di dalam radius lingkaran titik acuan.",
+                title = stringResource(R.string.tools_item_generator_title),
+                description = stringResource(R.string.tools_item_generator_desc),
                 icon = Icons.Default.Refresh,
                 onClick = onNavigateToGenerator
             )
 
             ToolItemCard(
-                title = "Alarm & Jadwal Notifikasi",
-                description = "Pengingat terjadwal jam dan hari tertentu untuk membuka dan menjalankan GPS Mirage.",
+                title = stringResource(R.string.tools_item_alarm_title),
+                description = stringResource(R.string.tools_item_alarm_desc),
                 icon = Icons.Default.Alarm,
                 onClick = onNavigateToAlarmScheduler
             )
@@ -361,20 +363,20 @@ fun ToolsScreen(
 
             // SECTION 4: DATA MANAGEMENT
             SectionHeader(
-                title = "DATA MANAGEMENT",
-                description = "Penyimpanan, pencadangan, dan pemulihan data titik koordinat tersimpan."
+                title = stringResource(R.string.tools_section_data_title),
+                description = stringResource(R.string.tools_section_data_desc)
             )
 
             ToolItemCard(
-                title = "Import Locations",
-                description = "Tempel koordinat tunggal/massal dalam berbagai format, atau impor file JSON cadangan.",
+                title = stringResource(R.string.tools_item_import_title),
+                description = stringResource(R.string.tools_item_import_desc),
                 icon = Icons.Default.FileDownload,
                 onClick = onNavigateToImport
             )
 
             ToolItemCard(
-                title = "Export Locations",
-                description = "Ekspor lokasi favorit, folder tertentu, atau seluruh database koordinat ke file JSON.",
+                title = stringResource(R.string.tools_item_export_title),
+                description = stringResource(R.string.tools_item_export_desc),
                 icon = Icons.Default.FileUpload,
                 onClick = onNavigateToExport
             )

@@ -41,6 +41,8 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
+import androidx.compose.ui.res.stringResource
+import com.dhikadityre.dev.tools.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +67,7 @@ fun NativeGpsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Native GPS Telemetry",
+                        text = stringResource(R.string.native_gps_title),
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -73,7 +75,7 @@ fun NativeGpsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 }
@@ -104,7 +106,7 @@ fun NativeGpsScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Simpan Lokasi Native",
+                            text = stringResource(R.string.native_gps_save_point),
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )
@@ -141,13 +143,13 @@ fun NativeGpsScreen(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Menghubungkan ke GPS Fisik...",
+                                text = stringResource(R.string.native_gps_connecting),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Text(
-                                text = "Membaca sinyal satelit hardware tanpa mock.",
+                                text = stringResource(R.string.native_gps_connecting_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
                             )
@@ -173,13 +175,13 @@ fun NativeGpsScreen(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "GPS Fisik Aktif (Unmocked)",
+                                text = stringResource(R.string.native_gps_active),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "Akurasi hardware: ±%.1f m".format(uiState.accuracy),
+                                text = stringResource(R.string.native_gps_hardware_accuracy, uiState.accuracy),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                             )
@@ -190,7 +192,7 @@ fun NativeGpsScreen(
 
             // Live Telemetry Grid
             Text(
-                text = "TELEMETRI LIVE FISIK",
+                text = stringResource(R.string.native_gps_live_section),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -220,13 +222,13 @@ fun NativeGpsScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 TelemetryMetricCard(
-                    title = "Akurasi",
+                    title = stringResource(R.string.native_gps_accuracy),
                     value = if (uiState.accuracy > 0f) "±%.1f m".format(uiState.accuracy) else "--",
                     icon = Icons.Default.GpsFixed,
                     modifier = Modifier.weight(1f)
                 )
                 TelemetryMetricCard(
-                    title = "Ketinggian (Altitude)",
+                    title = stringResource(R.string.native_gps_altitude),
                     value = if (uiState.altitude != 0.0) "%.1f m".format(uiState.altitude) else "--",
                     icon = Icons.Default.Height,
                     modifier = Modifier.weight(1f)
@@ -238,13 +240,13 @@ fun NativeGpsScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 TelemetryMetricCard(
-                    title = "Kecepatan (Speed)",
+                    title = stringResource(R.string.native_gps_speed),
                     value = "%.1f km/h".format(uiState.speed),
                     icon = Icons.Default.Speed,
                     modifier = Modifier.weight(1f)
                 )
                 TelemetryMetricCard(
-                    title = "Orientasi (Bearing)",
+                    title = stringResource(R.string.native_gps_bearing),
                     value = "%.1f°".format(uiState.bearing),
                     icon = Icons.Default.Explore,
                     modifier = Modifier.weight(1f)
@@ -271,7 +273,7 @@ fun NativeGpsScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Radius Acuan Benchmark",
+                                text = stringResource(R.string.native_gps_radius_benchmark),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -312,7 +314,7 @@ fun NativeGpsScreen(
 
             // OSMDroid Map Preview
             Text(
-                text = "PREVIEW PETA FISIK (OSM)",
+                text = stringResource(R.string.native_gps_preview_section),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -365,8 +367,13 @@ fun NativeGpsScreen(
                             val marker = Marker(mapView).apply {
                                 position = point
                                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                title = "Posisi Fisik Hardware"
-                                snippet = "%.6f, %.6f (Akurasi: ±%.1fm)".format(lat, lng, uiState.accuracy)
+                                title = mapView.context.getString(R.string.native_gps_marker_title)
+                                snippet = "%.6f, %.6f (%s: ±%.1fm)".format(
+                                    lat,
+                                    lng,
+                                    mapView.context.getString(R.string.native_gps_accuracy),
+                                    uiState.accuracy
+                                )
                                 setOnMarkerClickListener { m, _ ->
                                     m.showInfoWindow()
                                     true
@@ -393,7 +400,7 @@ fun NativeGpsScreen(
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(28.dp))
                             Text(
-                                text = "Menunggu perolehan koordinat satelit...",
+                                text = stringResource(R.string.native_gps_waiting_satellites),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -412,14 +419,14 @@ fun NativeGpsScreen(
             onDismissRequest = { viewModel.onDismissSaveDialog() },
             title = {
                 Text(
-                    text = "Simpan Titik Native",
+                    text = stringResource(R.string.native_gps_dialog_title),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Titik telemetri ini akan disimpan dengan tag Native sebagai acuan baseline fisik:",
+                        text = stringResource(R.string.native_gps_dialog_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -429,7 +436,7 @@ fun NativeGpsScreen(
                         color = MaterialTheme.colorScheme.tertiaryContainer
                     ) {
                         Text(
-                            text = "Tipe: Native GPS Benchmark",
+                            text = stringResource(R.string.native_gps_type_badge),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -440,13 +447,14 @@ fun NativeGpsScreen(
                     OutlinedTextField(
                         value = uiState.saveLocationName,
                         onValueChange = { viewModel.onSaveLocationNameChanged(it) },
-                        label = { Text("Nama Lokasi") },
+                        label = { Text(stringResource(R.string.location_name)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Text(
-                        text = "Koordinat: %.6f, %.6f".format(
+                        text = stringResource(
+                            R.string.native_gps_coordinates_format,
                             uiState.latitude ?: 0.0,
                             uiState.longitude ?: 0.0
                         ),
@@ -460,14 +468,14 @@ fun NativeGpsScreen(
                 Button(
                     onClick = { viewModel.onConfirmSaveLocation() }
                 ) {
-                    Text("Simpan")
+                    Text(stringResource(R.string.action_save))
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { viewModel.onDismissSaveDialog() }
                 ) {
-                    Text("Batal")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )

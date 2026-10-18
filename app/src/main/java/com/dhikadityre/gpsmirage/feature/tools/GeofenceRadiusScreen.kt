@@ -58,8 +58,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dhikadityre.dev.tools.R
 import com.dhikadityre.gpsmirage.feature.settings.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,7 +96,7 @@ fun GeofenceRadiusScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Geofence Radius",
+                        text = stringResource(R.string.geofence_title),
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -102,7 +104,7 @@ fun GeofenceRadiusScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 }
@@ -121,7 +123,7 @@ fun GeofenceRadiusScreen(
             // Header Explanation
             Column {
                 Text(
-                    text = "INTERCEPT GPS / GEOFENCE RADIUS",
+                    text = stringResource(R.string.geofence_header_tag),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -129,7 +131,7 @@ fun GeofenceRadiusScreen(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Batasi area pemilihan mock location di dalam batas radius tertentu dari titik acuan (Center Anchor).",
+                    text = stringResource(R.string.geofence_header_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -158,7 +160,7 @@ fun GeofenceRadiusScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Aktifkan Batasan Radius",
+                            text = stringResource(R.string.geofence_enable_limit),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -201,14 +203,14 @@ fun GeofenceRadiusScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Titik Acuan (Center Anchor)",
+                            text = stringResource(R.string.geofence_center_anchor),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
 
                     Text(
-                        text = "Koordinat pusat lingkaran acuan batas geofence radius.",
+                        text = stringResource(R.string.geofence_center_anchor_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -271,7 +273,7 @@ fun GeofenceRadiusScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Gunakan GPS", maxLines = 1)
+                                Text(stringResource(R.string.geofence_use_gps), maxLines = 1)
                             }
                         }
 
@@ -285,7 +287,7 @@ fun GeofenceRadiusScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Reset Mayapada", maxLines = 1)
+                            Text(stringResource(R.string.geofence_reset_mayapada), maxLines = 1)
                         }
                     }
 
@@ -299,7 +301,7 @@ fun GeofenceRadiusScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Simpan Titik Acuan")
+                        Text(stringResource(R.string.geofence_save_anchor))
                     }
                 }
             }
@@ -324,7 +326,7 @@ fun GeofenceRadiusScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Ukuran Radius",
+                            text = stringResource(R.string.geofence_radius_size),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -383,7 +385,7 @@ fun GeofenceRadiusScreen(
                     OutlinedTextField(
                         value = uiState.radiusInput,
                         onValueChange = { viewModel.onRadiusInputChanged(it) },
-                        label = { Text("Input Jarak Manual (meter)") },
+                        label = { Text(stringResource(R.string.geofence_manual_distance_input)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
@@ -427,13 +429,13 @@ fun GeofenceRadiusScreen(
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Panduan Setup Mock Location",
+                                text = stringResource(R.string.geofence_setup_guide_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Pelajari langkah mengaktifkan Developer Options dan Mock Location App di Android.",
+                                text = stringResource(R.string.geofence_setup_guide_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
