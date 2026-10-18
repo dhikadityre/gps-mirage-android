@@ -471,8 +471,12 @@ private fun OsmMapView(
                     position = anchorGeoPoint
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                     icon = getAnchorMarkerDrawable(mapView.context)
-                    title = "Anchor Point (Titik Acuan)"
-                    snippet = "Radius: ${radiusConfig.radiusMeters.toInt()}m"
+                    title = "Mayapada Tower (Titik Acuan Radius)"
+                    snippet = "Batas: ${radiusConfig.radiusMeters.toInt()} meter • Bukan titik mock"
+                    setOnMarkerClickListener { marker, _ ->
+                        marker.showInfoWindow()
+                        true
+                    }
                 }
                 mapView.overlays.add(anchorMarker)
 

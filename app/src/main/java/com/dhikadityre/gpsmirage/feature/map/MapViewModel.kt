@@ -188,6 +188,16 @@ class MapViewModel @Inject constructor(
             return
         }
 
+        // Guard: Anchor point is a preview center reference, not a selectable pinpoint
+        val anchor = currentState.radiusConfig.anchor
+        if (anchor != null) {
+            val isAtAnchor = Math.abs(lat - anchor.latitude) < 0.00001 &&
+                    Math.abs(lng - anchor.longitude) < 0.00001
+            if (isAtAnchor) {
+                return
+            }
+        }
+
         val selected = Coordinate(latitude = lat, longitude = lng)
         val (dist, isWithin) = calculateRadiusValidation(selected, currentState.radiusConfig)
 

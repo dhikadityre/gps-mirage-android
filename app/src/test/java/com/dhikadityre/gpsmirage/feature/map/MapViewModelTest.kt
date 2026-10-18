@@ -541,6 +541,21 @@ class MapViewModelTest {
     }
 
     @Test
+    fun `when in TAP_TO_SELECT mode, tapping directly on anchor coordinate is ignored`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.setSelectionMode(MapSelectionMode.TAP_TO_SELECT)
+        advanceUntilIdle()
+
+        // Attempt to tap directly on Mayapada Tower anchor
+        val anchor = RadiusConfig.MAYAPADA_TOWER
+        viewModel.onMapTap(anchor.latitude, anchor.longitude)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull("Tapping on the center anchor must not set it as a pinpoint", state.selectedCoordinate)
+    }
+
+    @Test
     fun `when in CENTER_PIN mode, onMapTap is ignored`() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         advanceUntilIdle()
